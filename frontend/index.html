@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ARIA — Autonomous Research Intelligence</title>
+    <link rel="stylesheet" href="/static/style.css" />
+</head>
+
+<body>
+    <div class="container">
+
+        <header>
+            <div class="logo">ARIA</div>
+            <div class="tagline">Autonomous Research & Intelligence Architecture</div>
+        </header>
+
+        <!-- Query Input -->
+        <section class="query-section" id="querySection">
+            <div class="input-wrapper">
+                <input type="text" id="queryInput" placeholder="Enter your research question..." autocomplete="off" />
+                <button id="submitBtn" onclick="startResearch()">Research</button>
+            </div>
+            <p class="hint">Example: "Impact of quantum computing on cryptography"</p>
+        </section>
+
+        <!-- Pipeline Progress -->
+        <section class="pipeline-section hidden" id="pipelineSection">
+            <h2>Pipeline Running</h2>
+            <div class="pipeline">
+                <div class="agent-card" id="agent-researcher">
+                    <div class="agent-icon">🔍</div>
+                    <div class="agent-name">Researcher</div>
+                    <div class="agent-status">Waiting</div>
+                </div>
+                <div class="connector">→</div>
+                <div class="agent-card" id="agent-classifier">
+                    <div class="agent-icon">🗂️</div>
+                    <div class="agent-name">Classifier</div>
+                    <div class="agent-status">Waiting</div>
+                </div>
+                <div class="connector">→</div>
+                <div class="agent-card" id="agent-analyst">
+                    <div class="agent-icon">📊</div>
+                    <div class="agent-name">Analyst</div>
+                    <div class="agent-status">Waiting</div>
+                </div>
+                <div class="connector">→</div>
+                <div class="agent-card" id="agent-devil">
+                    <div class="agent-icon">😈</div>
+                    <div class="agent-name">Devil's Advocate</div>
+                    <div class="agent-status">Waiting</div>
+                </div>
+                <div class="connector">→</div>
+                <div class="agent-card" id="agent-synthesizer">
+                    <div class="agent-icon">🔗</div>
+                    <div class="agent-name">Synthesizer</div>
+                    <div class="agent-status">Waiting</div>
+                </div>
+                <div class="connector">→</div>
+                <div class="agent-card" id="agent-visualizer">
+                    <div class="agent-icon">🏗️</div>
+                    <div class="agent-name">Structurer</div>
+                    <div class="agent-status">Waiting</div>
+                </div>
+                <div class="connector">→</div>
+                <div class="agent-card" id="agent-writer">
+                    <div class="agent-icon">✍️</div>
+                    <div class="agent-name">Writer</div>
+                    <div class="agent-status">Waiting</div>
+                </div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="status-text" id="statusText">Initializing pipeline...</div>
+        </section>
+
+        <!-- Report Output -->
+        <section class="report-section hidden" id="reportSection">
+            <div class="report-meta" id="reportMeta"></div>
+            <div class="tab-bar">
+                <button class="tab active" onclick="showTab('executive')">Executive</button>
+                <button class="tab" onclick="showTab('standard')">Full Report</button>
+                <button class="tab" onclick="showTab('technical')">Technical</button>
+                <button class="tab" onclick="showTab('citations')">Citations</button>
+            </div>
+            <div class="report-content" id="reportContent"></div>
+            <button class="new-research-btn" onclick="resetUI()">New Research</button>
+        </section>
+
+    </div>
+    <script src="/static/app.js"></script>
+</body>
+
+</html>

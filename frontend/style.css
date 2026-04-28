@@ -1,0 +1,327 @@
+/* frontend/style.css */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: #2a2a3d;
+    --accent: #6c63ff;
+    --accent2: #a78bfa;
+    --text: #e2e2f0;
+    --text-muted: #8888aa;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --error: #ef4444;
+}
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+}
+
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.logo {
+    font-size: 3rem;
+    font-weight: 900;
+    letter-spacing: 0.3em;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.tagline {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    letter-spacing: 0.15em;
+    margin-top: 0.5rem;
+    text-transform: uppercase;
+}
+
+/* Query Input */
+.query-section {
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.input-wrapper {
+    display: flex;
+    gap: 0.75rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.5rem;
+}
+
+#queryInput {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-size: 1rem;
+    padding: 0.5rem 0.75rem;
+}
+
+#queryInput::placeholder {
+    color: var(--text-muted);
+}
+
+#submitBtn {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0.6rem 1.5rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+#submitBtn:hover {
+    opacity: 0.85;
+}
+
+#submitBtn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.hint {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    text-align: center;
+    margin-top: 0.75rem;
+}
+
+/* Pipeline */
+.pipeline-section {
+    margin-top: 3rem;
+    text-align: center;
+}
+
+.pipeline-section h2 {
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 2rem;
+}
+
+.pipeline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+}
+
+.agent-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    min-width: 90px;
+    transition: all 0.3s ease;
+}
+
+.agent-card.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 20px rgba(108, 99, 255, 0.3);
+    transform: translateY(-3px);
+}
+
+.agent-card.done {
+    border-color: var(--success);
+    background: rgba(34, 197, 94, 0.08);
+}
+
+.agent-icon {
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.agent-name {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+}
+
+.agent-status {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    margin-top: 0.2rem;
+}
+
+.agent-card.active .agent-status {
+    color: var(--accent2);
+}
+
+.agent-card.done .agent-status {
+    color: var(--success);
+}
+
+.connector {
+    color: var(--border);
+    font-size: 1.2rem;
+}
+
+.progress-bar {
+    background: var(--surface);
+    border-radius: 999px;
+    height: 4px;
+    margin: 0 auto 1rem;
+    max-width: 600px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 999px;
+    width: 0%;
+    transition: width 0.5s ease;
+}
+
+.status-text {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    min-height: 1.5rem;
+}
+
+/* Report */
+.report-section {
+    margin-top: 3rem;
+}
+
+.report-meta {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.report-meta span strong {
+    color: var(--accent2);
+}
+
+.tab-bar {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.5rem;
+}
+
+.tab {
+    background: none;
+    border: 1px solid transparent;
+    color: var(--text-muted);
+    padding: 0.4rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.tab:hover {
+    color: var(--text);
+}
+
+.tab.active {
+    border-color: var(--accent);
+    color: var(--accent2);
+    background: rgba(108, 99, 255, 0.1);
+}
+
+.report-content {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 2rem;
+    line-height: 1.8;
+    font-size: 0.95rem;
+    white-space: pre-wrap;
+    min-height: 400px;
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.report-content h2 {
+    color: var(--accent2);
+    margin: 1.5rem 0 0.5rem;
+    font-size: 1.1rem;
+}
+
+.report-content strong {
+    color: var(--accent2);
+}
+
+.citation-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.8rem;
+    word-break: break-all;
+}
+
+.citation-item a {
+    color: var(--accent2);
+    text-decoration: none;
+}
+
+.citation-item a:hover {
+    text-decoration: underline;
+}
+
+.new-research-btn {
+    margin-top: 1.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 0.6rem 1.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.new-research-btn:hover {
+    border-color: var(--accent);
+    color: var(--text);
+}
+
+.hidden {
+    display: none !important;
+}
