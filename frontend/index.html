@@ -6,22 +6,34 @@
   <title>ARIA — Autonomous Research Intelligence</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
 
+  <!-- Background layers -->
   <div class="bg-grid"></div>
+  <div class="bg-glow"></div>
   <div class="bg-vignette"></div>
+
+  <!-- Classification strip -->
+  <div class="classif-banner">
+    <span class="cb-rule"></span>
+    RESTRICTED ACCESS — AUTHORIZED USERS ONLY — ARIA INTELLIGENCE SYSTEM
+    <span class="cb-rule"></span>
+  </div>
 
   <!-- Top bar -->
   <div class="topbar">
-    <span class="topbar-id">SYS // ARIA-v2.1</span>
+    <span class="topbar-id">
+      SYS&nbsp;//&nbsp;ARIA-v2.1
+      <span class="topbar-live"><span class="live-dot"></span>LIVE</span>
+    </span>
     <div class="topbar-indicators">
       <span class="indicator indicator--green">GROQ ONLINE</span>
       <span class="indicator indicator--blue">CACHE ACTIVE</span>
-      <span class="topbar-clock" id="topbarClock"></span>
     </div>
+    <span class="topbar-clock" id="topbarClock"></span>
   </div>
 
   <div class="container">
@@ -34,7 +46,16 @@
         <div class="logo-bracket">]</div>
       </div>
       <div class="tagline">AUTONOMOUS RESEARCH &amp; INTELLIGENCE ARCHITECTURE</div>
-      <div class="tagline-sub">Multi-agent pipeline · 7 specialized modules · Cross-domain synthesis</div>
+      <div class="tagline-sub">Multi-agent pipeline &nbsp;·&nbsp; 7 specialized modules &nbsp;·&nbsp; Cross-domain synthesis</div>
+      <div class="header-sep">
+        <div class="sep-line"></div>
+        <div class="sep-nodes">
+          <div class="sep-dot"></div>
+          <div class="sep-dot"></div>
+          <div class="sep-dot"></div>
+        </div>
+        <div class="sep-line"></div>
+      </div>
     </header>
 
     <!-- Query Input -->
@@ -70,7 +91,6 @@
       <div class="pipeline">
         <div class="agent-node" id="agent-researcher">
           <div class="node-badge">RE</div>
-          <div class="node-connector"></div>
           <div class="node-info">
             <div class="node-name">Researcher</div>
             <div class="node-status">Standby</div>
@@ -80,7 +100,6 @@
         <div class="pipe-line"></div>
         <div class="agent-node" id="agent-classifier">
           <div class="node-badge">CL</div>
-          <div class="node-connector"></div>
           <div class="node-info">
             <div class="node-name">Classifier</div>
             <div class="node-status">Standby</div>
@@ -90,7 +109,6 @@
         <div class="pipe-line"></div>
         <div class="agent-node" id="agent-analyst">
           <div class="node-badge">AN</div>
-          <div class="node-connector"></div>
           <div class="node-info">
             <div class="node-name">Analyst</div>
             <div class="node-status">Standby</div>
@@ -100,7 +118,6 @@
         <div class="pipe-line"></div>
         <div class="agent-node" id="agent-devil">
           <div class="node-badge">DA</div>
-          <div class="node-connector"></div>
           <div class="node-info">
             <div class="node-name">Devil's Advocate</div>
             <div class="node-status">Standby</div>
@@ -110,7 +127,6 @@
         <div class="pipe-line"></div>
         <div class="agent-node" id="agent-synthesizer">
           <div class="node-badge">SY</div>
-          <div class="node-connector"></div>
           <div class="node-info">
             <div class="node-name">Synthesizer</div>
             <div class="node-status">Standby</div>
@@ -120,7 +136,6 @@
         <div class="pipe-line"></div>
         <div class="agent-node" id="agent-visualizer">
           <div class="node-badge">VZ</div>
-          <div class="node-connector"></div>
           <div class="node-info">
             <div class="node-name">Structurer</div>
             <div class="node-status">Standby</div>
@@ -130,7 +145,6 @@
         <div class="pipe-line"></div>
         <div class="agent-node" id="agent-writer">
           <div class="node-badge">WR</div>
-          <div class="node-connector"></div>
           <div class="node-info">
             <div class="node-name">Writer</div>
             <div class="node-status">Standby</div>
@@ -139,12 +153,24 @@
         </div>
       </div>
 
-      <div class="progress-track">
-        <div class="progress-fill" id="progressFill"></div>
+      <div class="progress-wrap">
+        <span class="progress-label">PROCESSING</span>
+        <div class="progress-track">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
       </div>
 
-      <div class="terminal-log" id="terminalLog">
-        <div class="log-line" id="logLine">// Initializing pipeline...</div>
+      <div class="terminal-wrap">
+        <div class="terminal-header">
+          <span class="term-dot term-dot-r"></span>
+          <span class="term-dot term-dot-y"></span>
+          <span class="term-dot term-dot-g"></span>
+          <span class="terminal-title">aria-pipeline.log</span>
+          <span class="terminal-badge">LIVE</span>
+        </div>
+        <div class="terminal-log" id="terminalLog">
+          <div class="log-line" id="logLine">// Initializing pipeline...</div>
+        </div>
       </div>
     </section>
 
