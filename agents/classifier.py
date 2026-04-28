@@ -1,6 +1,6 @@
 # agents/classifier.py
 import time
-from core.gemini_client import build_model, call_gemini
+from core.groq_client import build_model, call_groq
 from core.memory import log_agent_call
 
 VALID_DOMAINS = [
@@ -92,7 +92,7 @@ RULES:
 - Every domain key must be present in output, even if empty list
 - Only use the 8 specified domain names
 """
-        result = call_gemini(self.model, prompt, expect_json=True)
+        result = call_groq(self.model, prompt, expect_json=True)
 
         if isinstance(result, dict) and "error" not in result:
             # Convert index lists to actual finding objects
@@ -137,7 +137,7 @@ RULES:
 - Queries must be specific to both the topic AND the domain
 - Make queries web-search-friendly (concise, keyword-rich)
 """
-        result = call_gemini(self.model, prompt, expect_json=True)
+        result = call_groq(self.model, prompt, expect_json=True)
 
         if isinstance(result, list):
             return [item.get("query", "") for item in result if "query" in item]

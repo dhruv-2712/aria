@@ -1,6 +1,6 @@
 # agents/visualizer.py
 import time
-from core.gemini_client import build_model, call_gemini
+from core.groq_client import build_model, call_groq
 from core.memory import log_agent_call
 
 
@@ -89,7 +89,7 @@ RULES:
 - First section is always Executive Overview
 - Last section is always Conclusion & Implications
 """
-        result = call_gemini(self.model, prompt, expect_json=True)
+        result = call_groq(self.model, prompt, expect_json=True)
         if isinstance(result, list):
             return sorted(result, key=lambda x: x.get("order", 99))
         return []
@@ -132,7 +132,7 @@ RULES:
 - columns must have 2-5 entries
 - Make tables that would genuinely help a reader understand the research
 """
-        result = call_gemini(self.model, prompt, expect_json=True)
+        result = call_groq(self.model, prompt, expect_json=True)
         if isinstance(result, list):
             return result
         return []
@@ -173,7 +173,7 @@ RULES:
 - Every sentence must earn its place
 - Confident, direct tone
 """
-        result = call_gemini(self.model, prompt, expect_json=False)
+        result = call_groq(self.model, prompt, expect_json=False)
         return result.strip() if isinstance(result, str) else ""
 
     def _validate_input(self, data: dict):

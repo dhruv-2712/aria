@@ -1,7 +1,7 @@
 # orchestrator.py
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from core.state import ARIAState
+from core.config import MAX_RESEARCH_LOOPS, MAX_CRITIQUE_LOOPS
 from core.memory import init_db, create_session, update_session_status, log_agent_call
 from agents.researcher import ResearcherAgent
 from agents.classifier import ClassifierAgent
@@ -76,6 +76,11 @@ class Orchestrator:
                 },
                 state
             )
+            if analyst_output.get("insight_count", 0) == 0:
+                raise ValueError(
+                    "Analyst returned 0 insights — research data is insufficient. "
+                    "Try a more specific query."
+                )
             state.store_output("analyst", analyst_output)
 
             # === PHASE 4: CRITIQUE (with revision loop) ===
@@ -228,7 +233,7 @@ class Orchestrator:
         all_findings = list(initial_findings)
         loop_count = 0
 
-        while loop_count <= 2:
+        while loop_count <= MAX_RESEARCH_LOOPS:
             classifier_output = self._run_with_retry(
                 "classifier",
                 self.classifier,
@@ -242,7 +247,7 @@ class Orchestrator:
             )
 
             follow_ups = classifier_output.get("follow_ups", [])
-            if not follow_ups or loop_count >= 2:
+            if not follow_ups or loop_count >= MAX_RESEARCH_LOOPS:
                 break
 
             print(f"[Orchestrator] Research loop {loop_count + 1}: "
@@ -269,7 +274,7 @@ class Orchestrator:
         insights = analyst_output.get("insights", [])
         revision_count = 0
 
-        while revision_count <= 2:
+        while revision_count <= MAX_CRITIQUE_LOOPS:
             devil_output = self._run_with_retry(
                 "devil",
                 self.devil,
@@ -283,7 +288,7 @@ class Orchestrator:
                 state
             )
 
-            if not devil_output.get("revision_needed") or revision_count >= 2:
+            if not devil_output.get("revision_needed") or revision_count >= MAX_CRITIQUE_LOOPS:
                 break
 
             print(f"[Orchestrator] Critique loop {revision_count + 1}: "

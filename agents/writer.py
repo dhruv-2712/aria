@@ -1,7 +1,7 @@
 # agents/writer.py
+import asyncio
 import time
-from concurrent.futures import ThreadPoolExecutor
-from core.gemini_client import build_model, call_gemini
+from core.groq_client import build_model, call_groq
 from core.memory import log_agent_call, save_report
 
 
@@ -18,14 +18,14 @@ class WriterAgent:
         start = time.time()
         print("[Writer] Generating all 3 report formats in parallel...")
 
-        with ThreadPoolExecutor(max_workers=3) as executor:
-            future_executive = executor.submit(self._write_executive, input_data)
-            future_standard  = executor.submit(self._write_standard, input_data)
-            future_technical = executor.submit(self._write_technical, input_data)
+        async def _gather():
+            return await asyncio.gather(
+                asyncio.to_thread(self._write_executive, input_data),
+                asyncio.to_thread(self._write_standard, input_data),
+                asyncio.to_thread(self._write_technical, input_data),
+            )
 
-            executive = future_executive.result()
-            standard  = future_standard.result()
-            technical = future_technical.result()
+        executive, standard, technical = asyncio.run(_gather())
 
         citations = self._compile_citations(input_data.get("findings", []))
 
@@ -87,7 +87,7 @@ RULES:
 - Every claim must be grounded in the research context provided
 - Confident, authoritative tone
 """
-        return call_gemini(self.model, prompt, expect_json=False)
+        return call_groq(self.model, prompt, expect_json=False)
 
     def _write_standard(self, input_data: dict) -> str:
         context = self._build_context(input_data)
@@ -128,7 +128,7 @@ RULES:
 - Maintain analytical, objective tone throughout
 - Every section must directly address the research question
 """
-        return call_gemini(self.model, prompt, expect_json=False)
+        return call_groq(self.model, prompt, expect_json=False)
 
     def _write_technical(self, input_data: dict) -> str:
         findings = input_data.get("findings", [])

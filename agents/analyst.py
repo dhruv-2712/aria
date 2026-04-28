@@ -1,6 +1,6 @@
 # agents/analyst.py
 import time
-from core.gemini_client import build_model, call_gemini
+from core.groq_client import build_model, call_groq
 from core.memory import log_agent_call
 
 
@@ -86,7 +86,7 @@ RULES:
 - Each insight must be a distinct, non-overlapping claim
 - Write claims as declarative statements of fact or finding
 """
-        result = call_gemini(self.model, prompt, expect_json=True)
+        result = call_groq(self.model, prompt, expect_json=True)
 
         if isinstance(result, dict) and "insights" in result:
             return result["insights"]
@@ -131,7 +131,7 @@ RULES:
 - Maximum 8 relationships
 - Never repeat the same pair
 """
-        result = call_gemini(self.model, prompt, expect_json=True)
+        result = call_groq(self.model, prompt, expect_json=True)
 
         if isinstance(result, list):
             return result

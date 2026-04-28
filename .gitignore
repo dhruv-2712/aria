@@ -18,6 +18,9 @@ venv/
 .venv/
 env/
 
+# Response cache
+.cache/
+
 # Database
 db/
 *.db

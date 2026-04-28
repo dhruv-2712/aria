@@ -1,6 +1,6 @@
 # agents/devil.py
 import time
-from core.gemini_client import build_model, call_gemini
+from core.groq_client import build_model, call_groq
 from core.memory import log_agent_call
 
 MAX_REVISION_LOOPS = 2
@@ -100,7 +100,7 @@ RULES:
 - suggested_qualification must be actionable
 - Be harsh but fair — good claims should still get "strong"
 """
-        result = call_gemini(self.model, prompt, expect_json=True)
+        result = call_groq(self.model, prompt, expect_json=True)
         if isinstance(result, dict) and "critiques" in result:
             return result["critiques"]
         return []
@@ -142,7 +142,7 @@ RULES:
 - Be specific — not just 'developing countries' but 'informal economy workers in Southeast Asia'
 - Focus on perspectives that would materially change conclusions if included
 """
-        result = call_gemini(self.model, prompt, expect_json=True)
+        result = call_groq(self.model, prompt, expect_json=True)
         if isinstance(result, list):
             return result
         return []
@@ -179,7 +179,7 @@ RULES:
 - Return empty array [] if no fallacies found
 - Maximum 5 flagged fallacies
 """
-        result = call_gemini(self.model, prompt, expect_json=True)
+        result = call_groq(self.model, prompt, expect_json=True)
         if isinstance(result, list):
             return result
         return []

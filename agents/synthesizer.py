@@ -1,6 +1,6 @@
 # agents/synthesizer.py
 import time
-from core.gemini_client import build_model, call_gemini
+from core.groq_client import build_model, call_groq
 from core.memory import log_agent_call
 
 
@@ -106,7 +106,7 @@ RULES:
 - Each connection must add new understanding, not just repeat known links
 - Minimum 3 connections, maximum 5
 """
-        result = call_gemini(self.model, prompt, expect_json=True)
+        result = call_groq(self.model, prompt, expect_json=True)
         if isinstance(result, list):
             return result
         return []
@@ -149,7 +149,7 @@ RULES:
 - Each implication must be distinct and non-overlapping
 - Acknowledge uncertainty where it exists
 """
-        result = call_gemini(self.model, prompt, expect_json=True)
+        result = call_groq(self.model, prompt, expect_json=True)
         if isinstance(result, list):
             return result
         return []
@@ -192,7 +192,7 @@ RULES:
 - Must be grounded in the actual research findings
 - Avoid hedging words like "may", "might", "could" — be bold but accurate
 """
-        result = call_gemini(self.model, prompt, expect_json=False)
+        result = call_groq(self.model, prompt, expect_json=False)
         return result.strip() if isinstance(result, str) else "Headline generation failed."
 
     def _build_narrative_arc(self, input_data: dict, headline: str) -> str:
@@ -223,7 +223,7 @@ RULES:
 - End with the "so what" — why this matters
 - Write for an intelligent non-specialist audience
 """
-        result = call_gemini(self.model, prompt, expect_json=False)
+        result = call_groq(self.model, prompt, expect_json=False)
         return result.strip() if isinstance(result, str) else ""
 
     def _validate_input(self, data: dict):
