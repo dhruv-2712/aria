@@ -5,6 +5,7 @@ import os
 from datetime import datetime
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "../db/aria.db")
+os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
 
 def get_connection():
