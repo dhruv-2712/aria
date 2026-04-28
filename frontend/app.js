@@ -1,275 +1,307 @@
 // frontend/app.js
 
 const PIPELINE_STAGES = [
-    { id: 'researcher', label: 'Researching', progress: 14 },
-    { id: 'classifier', label: 'Classifying', progress: 28 },
-    { id: 'analyst', label: 'Analyzing', progress: 42 },
-    { id: 'devil', label: 'Critiquing', progress: 57 },
-    { id: 'synthesizer', label: 'Synthesizing', progress: 71 },
-    { id: 'visualizer', label: 'Structuring', progress: 85 },
-    { id: 'writer', label: 'Writing', progress: 95 },
+  { id: 'researcher',  label: 'Gathering intelligence',  progress: 14 },
+  { id: 'classifier',  label: 'Classifying domains',     progress: 28 },
+  { id: 'analyst',     label: 'Extracting insights',     progress: 43 },
+  { id: 'devil',       label: 'Stress-testing claims',   progress: 57 },
+  { id: 'synthesizer', label: 'Synthesizing findings',   progress: 71 },
+  { id: 'visualizer',  label: 'Structuring report',      progress: 85 },
+  { id: 'writer',      label: 'Writing final report',    progress: 95 },
 ];
 
 const STATUS_TO_STAGE = {
-    researching: 'researcher',
-    classifying: 'classifier',
-    analyzing: 'analyst',
-    critiquing: 'devil',
-    synthesizing: 'synthesizer',
-    structuring: 'visualizer',
-    writing: 'writer',
-    done: 'done',
+  researching:  'researcher',
+  classifying:  'classifier',
+  analyzing:    'analyst',
+  critiquing:   'devil',
+  synthesizing: 'synthesizer',
+  structuring:  'visualizer',
+  writing:      'writer',
+  done:         'done',
 };
 
-let pollInterval = null;
 let currentSessionId = null;
-let currentTab = 'executive';
-let reportData = null;
+let currentTab       = 'executive';
+let reportData       = null;
+
+// ── Clock ───────────────────────────────────────────────────────
+function updateClock() {
+  const el = document.getElementById('topbarClock');
+  if (el) el.textContent = new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// ── Example queries ─────────────────────────────────────────────
+function setQuery(el) {
+  document.getElementById('queryInput').value = el.textContent;
+  document.getElementById('queryInput').focus();
+}
 
 // ── Start Research ──────────────────────────────────────────────
-// Replace startResearch() in app.js with this:
 async function startResearch() {
-    const query = document.getElementById('queryInput').value.trim();
-    if (!query) return;
+  const query = document.getElementById('queryInput').value.trim();
+  if (!query) return;
 
-    document.getElementById('submitBtn').disabled = true;
-    document.getElementById('querySection').classList.add('hidden');
-    document.getElementById('pipelineSection').classList.remove('hidden');
-    document.getElementById('reportSection').classList.add('hidden');
+  document.getElementById('submitBtn').disabled = true;
+  document.getElementById('querySection').classList.add('hidden');
+  document.getElementById('pipelineSection').classList.remove('hidden');
+  document.getElementById('reportSection').classList.add('hidden');
 
-    resetAgentCards();
-    setStatus('Sending query to ARIA...');
+  resetAgentCards();
+  setLog('Connecting to ARIA backend...');
 
-    try {
-        const res = await fetch('/research', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query })
-        });
-        const data = await res.json();
-        currentSessionId = data.session_id;  // use the real ID from response
-        startPolling();
-    } catch (err) {
-        setStatus('Failed to connect to ARIA backend.');
-        console.error(err);
-    }
+  try {
+    const res = await fetch('/research', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query })
+    });
+    const data = await res.json();
+    currentSessionId = data.session_id;
+
+    const sessionEl = document.getElementById('pipelineSession');
+    if (sessionEl) sessionEl.textContent = `SESSION // ${currentSessionId.slice(0, 8).toUpperCase()}`;
+
+    setLog('Pipeline initialised. Starting research...');
+    startStreaming();
+  } catch (err) {
+    setLog('ERROR: Failed to connect to ARIA backend.');
+    document.getElementById('submitBtn').disabled = false;
+    console.error(err);
+  }
 }
 
-// Replace pollStatus() with this:
-async function pollStatus() {
-    if (!currentSessionId) return;
-    try {
+// ── Streaming (SSE) with polling fallback ───────────────────────
+function startStreaming() {
+  const evtSource = new EventSource(`/stream/${currentSessionId}`);
+
+  evtSource.onmessage = async (e) => {
+    const data = JSON.parse(e.data);
+    updatePipelineUI(data.status);
+
+    if (data.status === 'done') {
+      evtSource.close();
+      setProgress(100);
+      setLog('Pipeline complete. Fetching report...');
+      await loadReport(currentSessionId);
+    } else if (data.status === 'failed') {
+      evtSource.close();
+      setLog('ERROR: Pipeline encountered a failure. Check server logs.');
+      document.getElementById('submitBtn').disabled = false;
+    }
+  };
+
+  evtSource.onerror = () => {
+    evtSource.close();
+    // Fallback to polling if SSE fails
+    const interval = setInterval(async () => {
+      try {
         const res = await fetch(`/status/${currentSessionId}`);
         const data = await res.json();
-        const status = data.status;
-
-        updatePipelineUI(status);
-
-        if (status === 'done') {
-            clearInterval(pollInterval);
-            setProgress(100);
-            setStatus('Pipeline complete. Loading report...');
-            await loadReport(currentSessionId);
-        } else if (status === 'failed') {
-            clearInterval(pollInterval);
-            setStatus('Pipeline encountered an error. Check terminal for details.');
-            document.getElementById('submitBtn').disabled = false;
-        }
-    } catch (err) {
-        console.error('Poll error:', err);
-    }
-}
-
-// ── Polling ─────────────────────────────────────────────────────
-function startPolling() {
-    const evtSource = new EventSource(`/stream/${currentSessionId}`);
-    evtSource.onmessage = async (e) => {
-        const data = JSON.parse(e.data);
         updatePipelineUI(data.status);
         if (data.status === 'done') {
-            evtSource.close();
-            setProgress(100);
-            await loadReport(currentSessionId);
+          clearInterval(interval);
+          setProgress(100);
+          await loadReport(currentSessionId);
         } else if (data.status === 'failed') {
-            evtSource.close();
-            setStatus('Pipeline failed. Check terminal.');
+          clearInterval(interval);
+          setLog('ERROR: Pipeline failed.');
         }
-    };
+      } catch (_) {}
+    }, 2500);
+  };
 }
 
-async function pollStatus() {
-    try {
-        const res = await fetch('/status/latest');
-        const data = await res.json();
-
-        const status = data.status;
-        const sessionId = data.session_id;
-
-        if (sessionId) currentSessionId = sessionId;
-
-        updatePipelineUI(status);
-
-        if (status === 'done') {
-            clearInterval(pollInterval);
-            setProgress(100);
-            setStatus('Pipeline complete. Loading report...');
-            await loadReport(sessionId);
-        } else if (status === 'failed') {
-            clearInterval(pollInterval);
-            setStatus('Pipeline encountered an error. Check logs.');
-        }
-    } catch (err) {
-        console.error('Poll error:', err);
-    }
-}
-
-// ── UI Updates ───────────────────────────────────────────────────
+// ── Pipeline UI ─────────────────────────────────────────────────
 function updatePipelineUI(status) {
-    const stageId = STATUS_TO_STAGE[status];
-    if (!stageId || stageId === 'done') return;
+  const stageId = STATUS_TO_STAGE[status];
+  if (!stageId || stageId === 'done') return;
 
-    const stageIndex = PIPELINE_STAGES.findIndex(s => s.id === stageId);
-    if (stageIndex === -1) return;
+  const stageIndex = PIPELINE_STAGES.findIndex(s => s.id === stageId);
+  if (stageIndex === -1) return;
 
-    // Mark previous stages done, current active
-    PIPELINE_STAGES.forEach((stage, i) => {
-        const card = document.getElementById(`agent-${stage.id}`);
-        if (!card) return;
-        card.classList.remove('active', 'done');
-        if (i < stageIndex) {
-            card.classList.add('done');
-            card.querySelector('.agent-status').textContent = '✓ Done';
-        } else if (i === stageIndex) {
-            card.classList.add('active');
-            card.querySelector('.agent-status').textContent = 'Running...';
-        } else {
-            card.querySelector('.agent-status').textContent = 'Waiting';
-        }
-    });
+  PIPELINE_STAGES.forEach((stage, i) => {
+    const node = document.getElementById(`agent-${stage.id}`);
+    if (!node) return;
+    node.classList.remove('active', 'done');
+    const statusEl = node.querySelector('.node-status');
+    if (i < stageIndex) {
+      node.classList.add('done');
+      statusEl.textContent = 'Complete';
+    } else if (i === stageIndex) {
+      node.classList.add('active');
+      statusEl.textContent = 'Running...';
+    } else {
+      statusEl.textContent = 'Standby';
+    }
+  });
 
-    setProgress(PIPELINE_STAGES[stageIndex].progress);
-    setStatus(`${PIPELINE_STAGES[stageIndex].label}...`);
+  const stage = PIPELINE_STAGES[stageIndex];
+  setProgress(stage.progress);
+  setLog(stage.label + '...');
 }
 
 function setProgress(pct) {
-    document.getElementById('progressFill').style.width = `${pct}%`;
+  document.getElementById('progressFill').style.width = `${pct}%`;
 }
 
-function setStatus(msg) {
-    document.getElementById('statusText').textContent = msg;
+function setLog(msg) {
+  const el = document.getElementById('logLine');
+  if (el) el.textContent = msg;
 }
 
 function resetAgentCards() {
-    PIPELINE_STAGES.forEach(stage => {
-        const card = document.getElementById(`agent-${stage.id}`);
-        if (!card) return;
-        card.classList.remove('active', 'done');
-        card.querySelector('.agent-status').textContent = 'Waiting';
-    });
-    setProgress(0);
+  PIPELINE_STAGES.forEach(stage => {
+    const node = document.getElementById(`agent-${stage.id}`);
+    if (!node) return;
+    node.classList.remove('active', 'done');
+    node.querySelector('.node-status').textContent = 'Standby';
+  });
+  setProgress(0);
 }
 
 // ── Report Loading ───────────────────────────────────────────────
 async function loadReport(sessionId) {
-    try {
-        const res = await fetch(`/report/${sessionId}`);
-        reportData = await res.json();
+  try {
+    const [reportRes, statusRes] = await Promise.all([
+      fetch(`/report/${sessionId}`),
+      fetch(`/status/${sessionId}`)
+    ]);
+    reportData = await reportRes.json();
+    const statusData = await statusRes.json();
+    const meta = statusData.metadata || {};
 
-        // Mark all agents done
-        PIPELINE_STAGES.forEach(stage => {
-            const card = document.getElementById(`agent-${stage.id}`);
-            if (card) {
-                card.classList.remove('active');
-                card.classList.add('done');
-                card.querySelector('.agent-status').textContent = '✓ Done';
-            }
-        });
+    // Mark all agents done
+    PIPELINE_STAGES.forEach(stage => {
+      const node = document.getElementById(`agent-${stage.id}`);
+      if (!node) return;
+      node.classList.remove('active');
+      node.classList.add('done');
+      node.querySelector('.node-status').textContent = 'Complete';
+    });
 
-        // Populate metadata
-        const statusRes = await fetch(`/status/${sessionId}`);
-        const statusData = await statusRes.json();
-        const meta = statusData.metadata || {};
+    // Stats
+    const stats = [
+      { label: 'FINDINGS',    value: meta.total_findings        ?? '–' },
+      { label: 'INSIGHTS',    value: meta.insights_generated    ?? '–' },
+      { label: 'CONFIDENCE',  value: meta.pipeline_confidence != null
+                                       ? (meta.pipeline_confidence * 100).toFixed(0) + '%'
+                                       : '–' },
+      { label: 'CONNECTIONS', value: meta.cross_domain_connections ?? '–' },
+      { label: 'WEAK CLAIMS', value: meta.weak_claims_ratio != null
+                                       ? (meta.weak_claims_ratio * 100).toFixed(0) + '%'
+                                       : '–' },
+    ];
 
-        document.getElementById('reportMeta').innerHTML = `
-      <span>🔍 <strong>${meta.total_findings ?? '–'}</strong> findings</span>
-      <span>💡 <strong>${meta.insights_generated ?? '–'}</strong> insights</span>
-      <span>📊 Confidence: <strong>${meta.pipeline_confidence ? (meta.pipeline_confidence * 100).toFixed(0) + '%' : '–'}</strong></span>
-      <span>🔗 <strong>${meta.cross_domain_connections ?? '–'}</strong> connections</span>
-      <span>⚠️ Weak claims: <strong>${meta.weak_claims_ratio ? (meta.weak_claims_ratio * 100).toFixed(0) + '%' : '–'}</strong></span>
-    `;
+    document.getElementById('reportMeta').innerHTML = stats.map(s => `
+      <div class="stat-card">
+        <div class="stat-label">${s.label}</div>
+        <div class="stat-value">${s.value}</div>
+      </div>`).join('');
 
-        document.getElementById('pipelineSection').classList.add('hidden');
-        document.getElementById('reportSection').classList.remove('hidden');
-        showTab('executive');
-
-    } catch (err) {
-        setStatus('Error loading report.');
-        console.error(err);
-    }
+    document.getElementById('pipelineSection').classList.add('hidden');
+    document.getElementById('reportSection').classList.remove('hidden');
+    showTab('executive');
+  } catch (err) {
+    setLog('ERROR: Failed to load report.');
+    console.error(err);
+  }
 }
 
 // ── Tab Switching ────────────────────────────────────────────────
 function showTab(tab) {
-    currentTab = tab;
+  currentTab = tab;
 
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab')[
-        ['executive', 'standard', 'technical', 'citations'].indexOf(tab)
-    ].classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === tab);
+  });
 
-    const content = document.getElementById('reportContent');
+  const content = document.getElementById('reportContent');
+  content.classList.remove('is-technical');
 
-    if (!reportData) {
-        content.textContent = 'No report data available.';
-        return;
+  if (!reportData) {
+    content.innerHTML = '<p style="color:var(--text-muted)">No report data.</p>';
+    return;
+  }
+
+  if (tab === 'citations') {
+    const citations = reportData.citations_json
+      ? JSON.parse(reportData.citations_json)
+      : (reportData.citations || []);
+
+    if (!citations.length) {
+      content.innerHTML = '<p style="color:var(--text-muted);font-family:var(--mono);font-size:0.82rem">// No citations recorded.</p>';
+      return;
     }
+    content.innerHTML = citations.map((c, i) => `
+      <div class="citation-item">
+        <span class="citation-index">[${String(i + 1).padStart(2, '0')}]</span>
+        <span class="citation-url"><a href="${c.url}" target="_blank" rel="noopener">${c.url}</a></span>
+        <span class="citation-conf">conf: ${c.confidence?.toFixed(2) ?? '–'}</span>
+      </div>`).join('');
+    return;
+  }
 
-    if (tab === 'citations') {
-        const citations = reportData.citations_json
-            ? JSON.parse(reportData.citations_json)
-            : reportData.citations || [];
+  if (tab === 'technical') {
+    content.classList.add('is-technical');
+    const raw = reportData.technical || reportData['technical'] || 'Not available.';
+    content.textContent = raw;
+    return;
+  }
 
-        if (!citations.length) {
-            content.innerHTML = '<p style="color:var(--text-muted)">No citations recorded.</p>';
-            return;
-        }
-        content.innerHTML = citations.map((c, i) =>
-            `<div class="citation-item">
-        [${i + 1}] <a href="${c.url}" target="_blank">${c.url}</a>
-        <span style="color:var(--text-muted);float:right">conf: ${c.confidence?.toFixed(2) ?? '–'}</span>
-      </div>`
-        ).join('');
-        return;
-    }
+  const raw = reportData[tab] || 'Content not available.';
+  content.innerHTML = renderMarkdown(raw);
+}
 
-    const fieldMap = {
-        executive: 'executive',
-        standard: 'standard',
-        technical: 'technical'
-    };
-    const raw = reportData[fieldMap[tab]] || 'Content not available.';
-
-    // Render basic markdown (##, **bold**)
-    content.innerHTML = raw
-        .replace(/## (.+)/g, '<h2>$1</h2>')
-        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\n/g, '<br>');
+// ── Markdown renderer ────────────────────────────────────────────
+function renderMarkdown(text) {
+  return text
+    // Escape existing HTML
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    // Headings
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    // Bold / italic
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    // Inline code
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    // Bullet lists (group consecutive lines)
+    .replace(/((?:^[*\-] .+\n?)+)/gm, (match) => {
+      const items = match.trim().split('\n')
+        .map(l => `<li>${l.replace(/^[*\-] /, '')}</li>`).join('');
+      return `<ul>${items}</ul>`;
+    })
+    // Blockquotes
+    .replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>')
+    // Paragraphs (double newlines)
+    .replace(/\n{2,}/g, '</p><p>')
+    // Single newlines
+    .replace(/\n/g, '<br>')
+    // Wrap in paragraph
+    .replace(/^/, '<p>').replace(/$/, '</p>')
+    // Clean up empty paragraphs around block elements
+    .replace(/<p>(<(?:h[123]|ul|blockquote))/g, '$1')
+    .replace(/(<\/(?:h[123]|ul|blockquote)>)<\/p>/g, '$1')
+    .replace(/<p><\/p>/g, '');
 }
 
 // ── Reset ────────────────────────────────────────────────────────
 function resetUI() {
-    clearInterval(pollInterval);
-    currentSessionId = null;
-    reportData = null;
+  currentSessionId = null;
+  reportData       = null;
 
-    document.getElementById('queryInput').value = '';
-    document.getElementById('submitBtn').disabled = false;
-    document.getElementById('querySection').classList.remove('hidden');
-    document.getElementById('pipelineSection').classList.add('hidden');
-    document.getElementById('reportSection').classList.add('hidden');
-    resetAgentCards();
+  document.getElementById('queryInput').value  = '';
+  document.getElementById('submitBtn').disabled = false;
+  document.getElementById('querySection').classList.remove('hidden');
+  document.getElementById('pipelineSection').classList.add('hidden');
+  document.getElementById('reportSection').classList.add('hidden');
+  resetAgentCards();
 }
 
-// Allow Enter key to submit
+// Enter key
 document.getElementById('queryInput')
-    .addEventListener('keydown', e => { if (e.key === 'Enter') startResearch(); });
+  .addEventListener('keydown', e => { if (e.key === 'Enter') startResearch(); });
