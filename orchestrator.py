@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from core.state import ARIAState
 from core.config import MAX_RESEARCH_LOOPS, MAX_CRITIQUE_LOOPS
 from core.memory import init_db, create_session, update_session_status, log_agent_call
+from core.dedup import deduplicate_findings
 from agents.researcher import ResearcherAgent
 from agents.classifier import ClassifierAgent
 from agents.analyst import AnalystAgent
@@ -26,7 +27,7 @@ class Orchestrator:
         self.visualizer = VisualizerAgent()
         self.writer = WriterAgent()
 
-    def run(self, query: str, on_status=None) -> dict:
+    def run(self, query: str, on_status=None, on_executive_token=None) -> dict:
         """
         Master entry point. Takes raw user query, runs all 8 agents,
         returns final report dict.
@@ -70,6 +71,7 @@ class Orchestrator:
             all_findings, classifier_output = self._run_research_loop(
                 query, state, research_output["findings"]
             )
+            all_findings = deduplicate_findings(all_findings)
             state.store_output("classifier", classifier_output)
 
             # === PHASE 3: ANALYZE ===
@@ -173,7 +175,8 @@ class Orchestrator:
                     "connections": synthesizer_output.get("connections", []),
                     "sections": visualizer_output.get("sections", []),
                     "executive_summary": visualizer_output.get("executive_summary", ""),
-                    "critiques": devil_output.get("critiques", [])
+                    "critiques": devil_output.get("critiques", []),
+                    "_on_executive_token": on_executive_token,
                 },
                 state
             )
@@ -212,11 +215,42 @@ class Orchestrator:
             }
 
     def _generate_search_queries(self, query: str) -> list:
-        """Break the user query into 3 targeted search angles."""
+        """Use LLM to decompose the query into 5-7 targeted web-search strings."""
+        from core.groq_client import build_model, call_groq
+        model = build_model(temperature=0.3)
+        prompt = f"""
+ROLE: You are a research query specialist.
+
+TASK: Break this research question into 5-7 targeted web search queries.
+Cover different angles: recent developments, statistics/data, expert criticism,
+historical context, economic impact, regional variation, future outlook.
+
+RESEARCH QUESTION: {query}
+
+OUTPUT FORMAT:
+Return ONLY a JSON array of query strings. No explanation. No markdown.
+["query 1", "query 2", "query 3", "query 4", "query 5"]
+
+RULES:
+- Each query must be web-search-friendly (concise, keyword-rich)
+- No duplicate angles — each query should retrieve different content
+- 5-7 queries total
+"""
+        try:
+            result = call_groq(model, prompt, expect_json=True)
+            if isinstance(result, list) and len(result) >= 3:
+                print(f"[Orchestrator] Query decomposed into {len(result)} search queries")
+                return result[:7]
+        except Exception as e:
+            print(f"[Orchestrator] Query decomposition failed: {e}")
+
+        # Fallback
         return [
-            f"{query} latest research findings 2024",
-            f"{query} economic social impact analysis",
-            f"{query} expert perspectives challenges opportunities"
+            f"{query} latest research 2024",
+            f"{query} economic impact analysis",
+            f"{query} expert perspectives challenges",
+            f"{query} statistics data evidence",
+            f"{query} criticism counterarguments",
         ]
 
     def _run_with_retry(self, agent_name: str, agent, input_data: dict,

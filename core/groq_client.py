@@ -50,6 +50,58 @@ def _save_cache(key: str, response) -> None:
     )
 
 
+def stream_groq(model: dict, prompt: str, callback=None) -> str:
+    """
+    Stream tokens from Groq, calling callback(token) for each chunk.
+    Returns the full text. Falls back to call_groq on error.
+    Cache-aware: if cached, calls callback with cached text in one shot.
+    """
+    from core.config import MODEL_FAST
+    temperature = model.get("temperature", 0.2) if isinstance(model, dict) else 0.2
+    model_name  = model.get("model_name",  MODEL_FAST) if isinstance(model, dict) else MODEL_FAST
+
+    key    = _cache_key(model_name, prompt)
+    cached = _load_cache(key)
+    if cached is not None and isinstance(cached, str):
+        print("[Groq] Cache hit (stream).")
+        if callback:
+            callback(cached)
+        return cached
+
+    full_text = ""
+    try:
+        stream = client.chat.completions.create(
+            model=model_name,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a precise AI assistant. "
+                        "When asked for JSON, return ONLY valid JSON — "
+                        "no markdown fences, no explanation, no preamble."
+                    ),
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=temperature,
+            max_tokens=8192,
+            stream=True,
+        )
+        for chunk in stream:
+            token = chunk.choices[0].delta.content or ""
+            if token:
+                full_text += token
+                if callback:
+                    callback(token)
+    except Exception as e:
+        print(f"[Groq] Streaming error: {e}. Falling back to call_groq.")
+        return call_groq(model, prompt, expect_json=False)
+
+    if full_text:
+        _save_cache(key, full_text)
+    return full_text
+
+
 def call_groq(model: dict, prompt: str, expect_json: bool = True) -> dict | str:
     from core.config import MODEL_FAST, MODEL_SMART
 

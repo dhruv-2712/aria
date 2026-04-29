@@ -158,6 +158,22 @@ def get_report(session_id: str) -> dict | None:
     conn.close()
     return dict(row) if row else None
 
+def get_all_sessions(limit: int = 20) -> list:
+    """Return completed sessions ordered newest first, with has_report flag."""
+    conn = get_connection()
+    rows = conn.execute("""
+        SELECT s.id, s.query, s.created_at, s.status,
+               CASE WHEN r.id IS NOT NULL THEN 1 ELSE 0 END AS has_report
+        FROM sessions s
+        LEFT JOIN reports r ON s.id = r.session_id
+        WHERE s.status = 'done'
+        ORDER BY s.created_at DESC
+        LIMIT ?
+    """, (limit,)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
 def get_cached_findings(query: str) -> list | None:
     """Return findings from a previous identical query if < 24 hours old."""
     conn = get_connection()

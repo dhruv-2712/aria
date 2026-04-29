@@ -98,7 +98,9 @@ class WriterAgent:
         return ctx
 
     def _write_executive(self, input_data: dict) -> str:
+        from core.groq_client import stream_groq
         context = self._build_context(input_data)
+        callback = input_data.get("_on_executive_token")
         prompt = f"""
 ROLE: You are a senior intelligence analyst writing a classified executive briefing
 for senior decision-makers who need depth, not just a summary.
@@ -141,6 +143,8 @@ RULES:
 - Bold key terms and critical findings with **asterisks**
 - No filler phrases ("it is important to note", "in conclusion", etc.)
 """
+        if callback:
+            return stream_groq(self.model, prompt, callback=callback)
         return call_groq(self.model, prompt, expect_json=False)
 
     def _write_standard(self, input_data: dict) -> str:
