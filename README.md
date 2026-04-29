@@ -1,11 +1,14 @@
 # ARIA — Autonomous Research & Intelligence Architecture
 
 > An 8-agent autonomous AI system that transforms any research question into a
-> publication-quality, multi-format report in under 90 seconds.
+> publication-quality, multi-format report.
 
 ![Pipeline](https://img.shields.io/badge/agents-8-6c63ff?style=flat-square)
 ![Stack](https://img.shields.io/badge/stack-Python%20%7C%20FastAPI%20%7C%20Groq%20%7C%20SQLite-a78bfa?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-22c55e?style=flat-square)
+
+**Live demo → [aria-kdrg.onrender.com](https://aria-kdrg.onrender.com)**
+*(Free tier — may take ~15 s to wake from sleep)*
 
 ---
 
@@ -60,21 +63,15 @@ User Query
           │  critiques all  │      if weak > 30%
           └────────┬────────┘
                    │
-                   ▼
-          ┌─────────────────┐
-          │  SYNTHESIZER    │
-          │    Agent 6      │
-          │ cross-domain    │
-          │  connections    │
-          └────────┬────────┘
-                   │
-                   ▼
-          ┌─────────────────┐
-          │   VISUALIZER    │
-          │    Agent 7      │
-          │ structure plan  │
-          └────────┬────────┘
-                   │
+         ┌─────────┴─────────┐  (parallel)
+         ▼                   ▼
+┌────────────────┐  ┌────────────────┐
+│  SYNTHESIZER   │  │   VISUALIZER   │
+│    Agent 6     │  │    Agent 7     │
+│ cross-domain   │  │ structure plan │
+│  connections   │  │                │
+└────────┬───────┘  └────────┬───────┘
+         └─────────┬─────────┘
                    ▼
           ┌─────────────────┐
           │     WRITER      │
@@ -83,13 +80,13 @@ User Query
           └────────┬────────┘     + technical)
                    │
                    ▼
-         ┌──────────────────┐
-         │   FINAL REPORT   │
-         │ Executive (400w) │
-         │ Standard (2000w) │
-         │ Technical Appendix│
-         │ Citations list   │
-         └──────────────────┘
+         ┌──────────────────────┐
+         │      FINAL REPORT    │
+         │ Executive  (700-900w)│
+         │ Standard (3500-4500w)│
+         │ Technical Appendix   │
+         │ Citations list       │
+         └──────────────────────┘
 ```
 
 ---
@@ -127,23 +124,37 @@ that specialist agents would miss individually.
 instantly, skipping the research phase entirely.
 
 **Parallel report generation** — All 3 report formats are generated
-simultaneously using ThreadPoolExecutor, cutting Writer time by ~60%.
+simultaneously using `asyncio.gather`, cutting Writer time by ~60%.
+
+**Live pipeline status** — Server-Sent Events stream real-time agent
+transitions to the UI so you watch each module light up as it runs.
 
 ---
 
 ## Report Formats
 
-### Executive Report (300–400 words)
-Business-friendly, zero jargon. Starts with the single most important finding,
-includes 2–3 actionable implications, ends with a bottom line.
+### Executive Briefing (700–900 words)
+Five-section intelligence brief: Situation Assessment → Key Intelligence
+Findings → Risk Factors & Countervailing Forces → Strategic Implications
+→ Bottom Line. Authoritative analyst tone, bold key terms, zero filler.
 
-### Standard Report (1500–2000 words)
-Structured sections with markdown formatting. Covers all domains, cross-domain
-analysis, implications and outlook. Suitable for academic or professional use.
+### Standard Report (3,500–4,500 words)
+Eight fully developed sections with per-domain subsections:
+
+1. Executive Overview
+2. Background & Context
+3. Methodology & Data Sources
+4. Domain-by-Domain Analysis *(one `###` subsection per domain)*
+5. Cross-Domain Synthesis
+6. Contested Claims & Uncertainty Analysis
+7. Forward Implications & Strategic Outlook
+8. Conclusion
+
+Publication-quality markdown — suitable for academic or professional use.
 
 ### Technical Appendix
-Raw findings with confidence scores, source URLs, methodology notes,
-insight inventory, and full pipeline confidence metrics.
+Raw findings with confidence scores, source URLs, full insight inventory,
+cross-domain connections, Devil's Advocate critiques, and pipeline metrics.
 
 ---
 
@@ -151,12 +162,13 @@ insight inventory, and full pipeline confidence metrics.
 
 | Layer | Technology |
 |---|---|
-| LLM Backend | Groq API (Llama 3.1 — free tier, 14,400 req/day) |
+| LLM Backend | Groq API — `llama-3.3-70b-versatile` (smart) + `llama-3.1-8b-instant` (fast fallback) |
 | API Framework | FastAPI + Uvicorn |
 | Database | SQLite (sessions, agent logs, reports, findings) |
-| Frontend | Vanilla HTML/CSS/JS — no framework |
-| Agent Orchestration | Custom Python — sequential + parallel |
-| State Management | Python dataclasses (ARIAState) |
+| Frontend | Vanilla HTML/CSS/JS — neon dark intelligence aesthetic, glassmorphism |
+| Agent Orchestration | Custom Python — sequential + parallel (ThreadPoolExecutor) |
+| State Management | `ARIAState` dataclass |
+| Deployment | Render (free tier) |
 
 ---
 
@@ -164,7 +176,7 @@ insight inventory, and full pipeline confidence metrics.
 
 ```
 aria/
-├── main.py                  # FastAPI entry point (4 endpoints)
+├── main.py                  # FastAPI entry point + SSE stream
 ├── orchestrator.py          # Agent 1 — master controller
 ├── agents/
 │   ├── researcher.py        # Agent 2 — web intelligence
@@ -176,14 +188,14 @@ aria/
 │   └── writer.py            # Agent 8 — report generation
 ├── core/
 │   ├── state.py             # ARIAState dataclass
-│   ├── gemini_client.py     # Groq API wrapper (named for compatibility)
+│   ├── groq_client.py       # Groq API wrapper with caching + retry
 │   ├── memory.py            # SQLite layer — logging + caching
-│   └── router.py            # Inter-agent routing
+│   └── config.py            # Model names, timeouts, limits
 ├── db/
 │   └── aria.db              # SQLite database (auto-created)
 ├── frontend/
 │   ├── index.html           # Single-page UI
-│   ├── style.css            # Dark theme
+│   ├── style.css            # Neon dark / glassmorphism theme
 │   └── app.js               # Pipeline visualiser + report renderer
 └── requirements.txt
 ```
@@ -202,13 +214,11 @@ pip install -r requirements.txt
 
 ### 2. Get a free Groq API key
 
-Sign up at [console.groq.com](https://console.groq.com) — free, no card needed,
-14,400 requests/day.
+Sign up at [console.groq.com](https://console.groq.com) — free, no card needed.
 
 ### 3. Set up environment
 
 ```bash
-# Create .env file
 echo "GROQ_API_KEY=your_key_here" > .env
 ```
 
@@ -227,10 +237,12 @@ Open [http://localhost:8000](http://localhost:8000) in your browser.
 | Method | Endpoint | Description |
 |---|---|---|
 | `POST` | `/research` | Start a new research job |
-| `GET` | `/status/{session_id}` | Poll job status |
-| `GET` | `/report/{session_id}` | Get final report |
-| `GET` | `/logs/{session_id}` | Get agent execution logs |
-| `GET` | `/health` | API health check |
+| `GET` | `/status/{session_id}` | Poll job status + metadata |
+| `GET` | `/status/latest` | Status of the most recent job |
+| `GET` | `/stream/{session_id}` | SSE stream of live status updates |
+| `GET` | `/report/{session_id}` | Get final report (all 3 formats) |
+| `GET` | `/logs/{session_id}` | Agent execution logs with timing |
+| `GET` | `/health` | Active job count + API health |
 
 ### Example
 
@@ -247,8 +259,8 @@ curl -X POST http://localhost:8000/research \
   "query": "Impact of quantum computing on cryptography"
 }
 
-# Poll status
-curl http://localhost:8000/status/abc123
+# Stream live status (SSE)
+curl http://localhost:8000/stream/abc123
 
 # Get report when done
 curl http://localhost:8000/report/abc123
@@ -289,11 +301,11 @@ No GPU required. Runs entirely on CPU via Groq's cloud inference.
 For query: *"Impact of quantum computing on cryptography"*
 
 ```
-✅ 35 findings gathered
-✅ 10 insights extracted  
-✅ 81% pipeline confidence
-✅ 5 cross-domain connections
-✅ Executive + Standard + Technical reports generated
+✅ 35+ findings gathered across 8 domains
+✅ 10+ insights extracted
+✅ ~80% pipeline confidence
+✅ 5+ cross-domain connections identified
+✅ Devil's Advocate critique loop completed
+✅ Executive (700-900w) + Standard (3500-4500w) + Technical reports generated
 ✅ Citations compiled
 ```
-
