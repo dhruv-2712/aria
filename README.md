@@ -1,174 +1,197 @@
-# ARIA — Autonomous Research & Intelligence Architecture
-
-> An 8-agent autonomous AI system that transforms any research question into a
-> publication-quality, multi-format report.
-
-![Pipeline](https://img.shields.io/badge/agents-8-6c63ff?style=flat-square)
-![Stack](https://img.shields.io/badge/stack-Python%20%7C%20FastAPI%20%7C%20Groq%20%7C%20SQLite-a78bfa?style=flat-square)
-![License](https://img.shields.io/badge/license-MIT-22c55e?style=flat-square)
-
-**Live demo → [aria-kdrg.onrender.com](https://aria-kdrg.onrender.com)**
-*(Free tier — may take ~15 s to wake from sleep)*
-
----
-
-## What ARIA Does
-
-You type a research question. ARIA autonomously:
-
-1. Searches and gathers findings from multiple angles
-2. Classifies them across 8 domains and fills coverage gaps
-3. Extracts insights and maps relationships between ideas
-4. Critiques every claim with counterarguments
-5. Synthesizes cross-domain connections humans would miss
-6. Plans the optimal report structure
-7. Generates 3 publication-quality report formats simultaneously
-
-No human in the loop. No manual steps. One query → full research report.
-
----
-
-## Architecture
+<div align="center">
 
 ```
-User Query
-    │
-    ▼
-┌─────────────────────────────────────────────────────────────┐
-│                     ORCHESTRATOR (Agent 1)                  │
-│         Master controller · retry queue · global state      │
-└──────────────────────┬──────────────────────────────────────┘
-                       │
-         ┌─────────────▼─────────────┐
-         │                           │
-    ┌────▼─────┐              ┌──────▼──────┐
-    │RESEARCHER│◄─────────────│ CLASSIFIER  │
-    │ Agent 2  │  gap-fill    │  Agent 3    │
-    │          │  loop ×2     │             │
-    └────┬─────┘              └──────┬──────┘
-         │                           │
-         └──────────┬────────────────┘
-                    │ all findings
-                    ▼
-             ┌──────────────┐
-             │   ANALYST    │
-             │   Agent 4    │
-             │ insight map  │
-             └──────┬───────┘
-                    │
-                    ▼
-          ┌─────────────────┐
-          │ DEVIL'S ADVOCATE│◄──── revision loop ×2
-          │    Agent 5      │────► back to Analyst
-          │  critiques all  │      if weak > 30%
-          └────────┬────────┘
-                   │
-         ┌─────────┴─────────┐  (parallel)
-         ▼                   ▼
-┌────────────────┐  ┌────────────────┐
-│  SYNTHESIZER   │  │   VISUALIZER   │
-│    Agent 6     │  │    Agent 7     │
-│ cross-domain   │  │ structure plan │
-│  connections   │  │                │
-└────────┬───────┘  └────────┬───────┘
-         └─────────┬─────────┘
-                   ▼
-          ┌─────────────────┐
-          │     WRITER      │
-          │    Agent 8      │◄── parallel generation
-          │  3 formats      │    (executive + standard
-          └────────┬────────┘     + technical)
-                   │
-                   ▼
-         ┌──────────────────────┐
-         │      FINAL REPORT    │
-         │ Executive  (700-900w)│
-         │ Standard (3500-4500w)│
-         │ Technical Appendix   │
-         │ Citations list       │
-         └──────────────────────┘
+ ▄████████    ▄████████  ▄█     ▄████████
+███    ███   ███    ███ ███    ███    ███
+███    ███   ███    ███ ███▌   ███    ███
+███    ███  ▄███▄▄▄▄██▀ ███▌   ███    ███
+▀███████████▀▀███▀▀▀▀▀   ███▌ ▀███████████
+         ███▀███████████ ███           ███
+   ▄█    ███  ███    ███ ███     ▄█    ███
+ ▄████████▀   ███    ███ █▀    ▄████████▀
+              ███    ███
+```
+
+# Autonomous Research & Intelligence Architecture
+
+**One query. Eight agents. A publication-quality report.**
+
+[![Python](https://img.shields.io/badge/Python-3.11-3776ab?style=flat-square&logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Groq](https://img.shields.io/badge/Groq-LLaMA_3.3_70B-f55036?style=flat-square)](https://groq.com)
+[![License](https://img.shields.io/badge/License-MIT-22c55e?style=flat-square)](LICENSE)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Render-6c63ff?style=flat-square&logo=render&logoColor=white)](https://aria-kdrg.onrender.com)
+
+**[→ Try the live demo](https://aria-kdrg.onrender.com)**
+*Free tier — may take ~15s to wake from sleep*
+
+</div>
+
+---
+
+## What is ARIA?
+
+ARIA is a multi-agent research pipeline that takes a question and autonomously produces an exhaustive intelligence report. It doesn't just summarise — it gathers raw findings, classifies them across domains, extracts structured insights, stress-tests every claim with counterarguments, synthesizes cross-domain connections, and writes three distinct report formats in parallel.
+
+No prompt engineering. No manual steps. One input → complete research output.
+
+---
+
+## Pipeline
+
+```
+                         ┌─────────────────────────────────┐
+                         │            ORCHESTRATOR          │
+                         │   retry logic · state · loops   │
+                         └──────────────┬──────────────────┘
+                                        │
+                    ┌───────────────────┼───────────────────┐
+                    │                   │  gap-fill loop ×2  │
+                    ▼                   ▼                    │
+             ┌────────────┐    ┌──────────────┐             │
+             │ RESEARCHER │───▶│  CLASSIFIER  │─────────────┘
+             │  Agent 02  │    │   Agent 03   │
+             │            │    │ 8-domain map │
+             └────────────┘    └──────┬───────┘
+                                      │ all findings
+                                      ▼
+                               ┌─────────────┐
+                               │   ANALYST   │
+                               │  Agent 04   │
+                               │ insight map │
+                               └──────┬──────┘
+                                      │
+                          ┌───────────┤  revision loop ×2
+                          ▼           │
+                  ┌──────────────┐    │ if weak > 30%
+                  │   DEVIL'S   │────▶│ re-run analyst
+                  │   ADVOCATE  │    │
+                  │   Agent 05  │────┘
+                  └──────┬──────┘
+                         │
+              ┌──────────┴──────────┐  (parallel)
+              ▼                     ▼
+     ┌──────────────────┐  ┌────────────────┐
+     │   SYNTHESIZER    │  │   VISUALIZER   │
+     │    Agent 06      │  │    Agent 07    │
+     │ cross-domain     │  │ structure plan │
+     │ connections      │  │                │
+     └────────┬─────────┘  └───────┬────────┘
+              └──────────┬─────────┘
+                         ▼
+                  ┌─────────────┐
+                  │    WRITER   │
+                  │   Agent 08  │──── 3 formats in parallel
+                  └──────┬──────┘
+                         │
+          ┌──────────────┼──────────────┐
+          ▼              ▼              ▼
+   ┌────────────┐ ┌────────────┐ ┌──────────────┐
+   │ EXECUTIVE  │ │  STANDARD  │ │  TECHNICAL   │
+   │  700-900w  │ │ 3500-4500w │ │   Appendix   │
+   │ 5 sections │ │ 8 sections │ │ Raw findings │
+   └────────────┘ └────────────┘ └──────────────┘
 ```
 
 ---
 
-## Agent Specifications
+## Agents
 
-| # | Agent | Role | Key Behaviour |
-|---|---|---|---|
-| 1 | **Orchestrator** | Master controller | Retry queue, global state, loop management |
-| 2 | **Researcher** | Web intelligence | 3+ search angles, confidence scoring |
-| 3 | **Classifier** | Domain taxonomy | 8 domains, gap detection, research loops |
-| 4 | **Analyst** | Insight extraction | Relationship graph, confidence scoring |
-| 5 | **Devil's Advocate** | Adversarial critic | Counterarguments, fallacy detection, revision trigger |
-| 6 | **Synthesizer** | Cross-domain synthesis | Non-obvious connections, headline finding |
-| 7 | **Visualizer** | Content architecture | Section planning, executive summary |
-| 8 | **Writer** | Report generation | 3 formats in parallel, citation formatting |
+| # | Agent | Role | Key behaviour |
+|---|-------|------|---------------|
+| 01 | **Orchestrator** | Master controller | Retry queue, global state, loop orchestration |
+| 02 | **Researcher** | Web intelligence | 3+ search angles, source scoring |
+| 03 | **Classifier** | Domain taxonomy | 8-domain map, gap detection, follow-up loops |
+| 04 | **Analyst** | Insight extraction | Relationship graphs, confidence scoring |
+| 05 | **Devil's Advocate** | Adversarial critic | Counterarguments, fallacy detection, revision trigger |
+| 06 | **Synthesizer** | Cross-domain synthesis | Non-obvious connections, headline finding |
+| 07 | **Visualizer** | Content architecture | Section planning, executive summary |
+| 08 | **Writer** | Report generation | 3 formats simultaneously, citation formatting |
 
 ---
 
-## Intelligence Features
+## Features
 
-**Adversarial critique loop** — Devil's Advocate scores every claim as
-strong/moderate/weak/unverified. If weak claims exceed 30% of total,
-it triggers an automatic revision request back to the Analyst. Max 2 loops.
+<details>
+<summary><strong>Adversarial critique loop</strong></summary>
 
-**Research gap filling** — Classifier identifies domains with fewer than 2
-findings and sends targeted follow-up queries back to the Researcher.
-Max 2 loops to prevent infinite recursion.
+Devil's Advocate scores every claim: **strong / moderate / weak / unverified**. If weak claims exceed 30% of total, it fires a revision request back to the Analyst. Runs up to 2 iterations before proceeding.
+</details>
 
-**Cross-domain synthesis** — Synthesizer finds non-obvious connections
-between different domains (e.g. economic insight linking to ethical insight)
-that specialist agents would miss individually.
+<details>
+<summary><strong>Research gap filling</strong></summary>
 
-**Query caching** — Identical queries within 24 hours return cached findings
-instantly, skipping the research phase entirely.
+After initial classification, ARIA checks which domains have fewer than 2 findings and sends targeted follow-up queries back to the Researcher. Maximum 2 gap-fill loops to prevent runaway calls.
+</details>
 
-**Parallel report generation** — All 3 report formats are generated
-simultaneously using `asyncio.gather`, cutting Writer time by ~60%.
+<details>
+<summary><strong>Cross-domain synthesis</strong></summary>
 
-**Live pipeline status** — Server-Sent Events stream real-time agent
-transitions to the UI so you watch each module light up as it runs.
+The Synthesizer is specifically tasked with finding connections *across* domains — the kind of insight that only appears when you hold economic, ethical, technical, and political findings simultaneously.
+</details>
+
+<details>
+<summary><strong>Parallel report generation</strong></summary>
+
+All three report formats are generated at the same time using `asyncio.gather`. Writer time is cut by ~60% compared to sequential generation.
+</details>
+
+<details>
+<summary><strong>Live pipeline status via SSE</strong></summary>
+
+The frontend connects over Server-Sent Events and watches each agent activate in real time. No polling. Each phase transition is pushed the moment it happens.
+</details>
+
+<details>
+<summary><strong>Groq rate-limit resilience</strong></summary>
+
+On a daily token-per-day (TPD) limit hit, ARIA automatically falls back from `llama-3.3-70b-versatile` to `llama-3.1-8b-instant` and retries — no error surfaced to the user.
+</details>
+
+<details>
+<summary><strong>Query-level caching</strong></summary>
+
+Identical queries within 24 hours return cached findings immediately, skipping the entire research phase. LLM responses are also individually cached with a configurable TTL.
+</details>
 
 ---
 
 ## Report Formats
 
-### Executive Briefing (700–900 words)
-Five-section intelligence brief: Situation Assessment → Key Intelligence
-Findings → Risk Factors & Countervailing Forces → Strategic Implications
-→ Bottom Line. Authoritative analyst tone, bold key terms, zero filler.
+### Executive Briefing — 700–900 words
+Intelligence-analyst style. Five structured sections:
+1. Situation Assessment
+2. Key Intelligence Findings
+3. Risk Factors & Countervailing Forces
+4. Strategic Implications
+5. Bottom Line
 
-### Standard Report (3,500–4,500 words)
-Eight fully developed sections with per-domain subsections:
-
+### Standard Report — 3,500–4,500 words
+Eight fully developed sections, each domain gets its own `###` subsection:
 1. Executive Overview
 2. Background & Context
 3. Methodology & Data Sources
-4. Domain-by-Domain Analysis *(one `###` subsection per domain)*
+4. Domain-by-Domain Analysis
 5. Cross-Domain Synthesis
 6. Contested Claims & Uncertainty Analysis
 7. Forward Implications & Strategic Outlook
 8. Conclusion
 
-Publication-quality markdown — suitable for academic or professional use.
-
 ### Technical Appendix
-Raw findings with confidence scores, source URLs, full insight inventory,
-cross-domain connections, Devil's Advocate critiques, and pipeline metrics.
+Raw pipeline data: all findings with confidence scores and source URLs, full insight inventory, Devil's Advocate critiques with weakness scores, cross-domain connections, and pipeline confidence metrics.
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| LLM Backend | Groq API — `llama-3.3-70b-versatile` (smart) + `llama-3.1-8b-instant` (fast fallback) |
-| API Framework | FastAPI + Uvicorn |
-| Database | SQLite (sessions, agent logs, reports, findings) |
-| Frontend | Vanilla HTML/CSS/JS — neon dark intelligence aesthetic, glassmorphism |
-| Agent Orchestration | Custom Python — sequential + parallel (ThreadPoolExecutor) |
-| State Management | `ARIAState` dataclass |
-| Deployment | Render (free tier) |
+| Layer | Choice | Why |
+|-------|--------|-----|
+| LLM | Groq — `llama-3.3-70b-versatile` + `llama-3.1-8b-instant` | Fastest inference available; free 100k TPD |
+| API | FastAPI + Uvicorn | Async-native, SSE support, minimal overhead |
+| DB | SQLite | Zero-config, fully portable, complete observability |
+| Frontend | Vanilla HTML/CSS/JS | No build step, no framework, instant load |
+| Concurrency | `asyncio` + `ThreadPoolExecutor` | Parallel report gen + parallel research phases |
+| Hosting | Render | Free tier, auto-deploy from GitHub |
 
 ---
 
@@ -176,27 +199,26 @@ cross-domain connections, Devil's Advocate critiques, and pipeline metrics.
 
 ```
 aria/
-├── main.py                  # FastAPI entry point + SSE stream
-├── orchestrator.py          # Agent 1 — master controller
+├── main.py                   # FastAPI app, SSE stream, job queue
+├── orchestrator.py           # Master controller — runs all 8 agents
 ├── agents/
-│   ├── researcher.py        # Agent 2 — web intelligence
-│   ├── classifier.py        # Agent 3 — domain taxonomy
-│   ├── analyst.py           # Agent 4 — insight extraction
-│   ├── devil.py             # Agent 5 — adversarial critic
-│   ├── synthesizer.py       # Agent 6 — cross-domain synthesis
-│   ├── visualizer.py        # Agent 7 — content architecture
-│   └── writer.py            # Agent 8 — report generation
+│   ├── researcher.py         # Web search + confidence scoring
+│   ├── classifier.py         # Domain taxonomy + gap detection
+│   ├── analyst.py            # Insight extraction + relationship mapping
+│   ├── devil.py              # Adversarial critique + revision trigger
+│   ├── synthesizer.py        # Cross-domain synthesis
+│   ├── visualizer.py         # Report structure planning
+│   └── writer.py             # Parallel report generation (3 formats)
 ├── core/
-│   ├── state.py             # ARIAState dataclass
-│   ├── groq_client.py       # Groq API wrapper with caching + retry
-│   ├── memory.py            # SQLite layer — logging + caching
-│   └── config.py            # Model names, timeouts, limits
-├── db/
-│   └── aria.db              # SQLite database (auto-created)
+│   ├── groq_client.py        # API wrapper — caching, retry, TPD fallback
+│   ├── memory.py             # SQLite layer — sessions, logs, reports
+│   ├── state.py              # ARIAState dataclass
+│   └── config.py             # Models, limits, timeouts
 ├── frontend/
-│   ├── index.html           # Single-page UI
-│   ├── style.css            # Neon dark / glassmorphism theme
-│   └── app.js               # Pipeline visualiser + report renderer
+│   ├── index.html
+│   ├── style.css             # Neon dark / glassmorphism
+│   └── app.js                # SSE client, pipeline visualiser, markdown renderer
+├── db/                       # Auto-created on first run
 └── requirements.txt
 ```
 
@@ -204,66 +226,47 @@ aria/
 
 ## Quick Start
 
-### 1. Clone and install
-
 ```bash
-git clone https://github.com/dhruv-2712/aria.git
-cd aria
+# 1. Clone
+git clone https://github.com/dhruv-2712/aria.git && cd aria
+
+# 2. Install
 pip install -r requirements.txt
-```
 
-### 2. Get a free Groq API key
-
-Sign up at [console.groq.com](https://console.groq.com) — free, no card needed.
-
-### 3. Set up environment
-
-```bash
+# 3. Add your Groq API key (free at console.groq.com)
 echo "GROQ_API_KEY=your_key_here" > .env
-```
 
-### 4. Run
-
-```bash
+# 4. Run
 python -m uvicorn main:app --reload --port 8000
 ```
 
-Open [http://localhost:8000](http://localhost:8000) in your browser.
+Open **http://localhost:8000**
 
 ---
 
-## API Endpoints
+## API
 
 | Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/research` | Start a new research job |
-| `GET` | `/status/{session_id}` | Poll job status + metadata |
+|--------|----------|-------------|
+| `POST` | `/research` | Start a research job |
+| `GET` | `/stream/{id}` | SSE stream of live status |
+| `GET` | `/status/{id}` | Job status + metadata |
 | `GET` | `/status/latest` | Status of the most recent job |
-| `GET` | `/stream/{session_id}` | SSE stream of live status updates |
-| `GET` | `/report/{session_id}` | Get final report (all 3 formats) |
-| `GET` | `/logs/{session_id}` | Agent execution logs with timing |
-| `GET` | `/health` | Active job count + API health |
-
-### Example
+| `GET` | `/report/{id}` | Final report — all 3 formats |
+| `GET` | `/logs/{id}` | Full agent execution logs |
+| `GET` | `/health` | Active job count |
 
 ```bash
-# Start research
+# Start
 curl -X POST http://localhost:8000/research \
   -H "Content-Type: application/json" \
   -d '{"query": "Impact of quantum computing on cryptography"}'
 
-# Response
-{
-  "session_id": "abc123",
-  "message": "Research job started",
-  "query": "Impact of quantum computing on cryptography"
-}
+# Watch live
+curl -N http://localhost:8000/stream/<session_id>
 
-# Stream live status (SSE)
-curl http://localhost:8000/stream/abc123
-
-# Get report when done
-curl http://localhost:8000/report/abc123
+# Collect
+curl http://localhost:8000/report/<session_id>
 ```
 
 ---
@@ -271,14 +274,13 @@ curl http://localhost:8000/report/abc123
 ## Database Schema
 
 ```sql
-sessions      -- id, query, created_at, status
-agent_logs    -- session_id, agent_name, input_json, output_json, duration_ms
-reports       -- session_id, executive, standard, technical, citations_json
-findings      -- session_id, content, source_url, confidence, domain
+sessions      id · query · created_at · status
+agent_logs    session_id · agent_name · input_json · output_json · duration_ms
+reports       session_id · executive · standard · technical · citations_json
+findings      session_id · content · source_url · confidence · domain
 ```
 
-Every agent call is logged with full input/output JSON and duration.
-Complete pipeline observability out of the box.
+Every agent call is stored with full input/output JSON and millisecond timing. Complete pipeline observability with zero extra config.
 
 ---
 
@@ -292,20 +294,10 @@ python-dotenv
 pydantic
 ```
 
-No GPU required. Runs entirely on CPU via Groq's cloud inference.
+No GPU. No Docker. Runs on any machine with Python 3.11+.
 
 ---
 
-## Sample Output
-
-For query: *"Impact of quantum computing on cryptography"*
-
-```
-✅ 35+ findings gathered across 8 domains
-✅ 10+ insights extracted
-✅ ~80% pipeline confidence
-✅ 5+ cross-domain connections identified
-✅ Devil's Advocate critique loop completed
-✅ Executive (700-900w) + Standard (3500-4500w) + Technical reports generated
-✅ Citations compiled
-```
+<div align="center">
+  <sub>Built with the Groq API · Deployed on Render · MIT License</sub>
+</div>
