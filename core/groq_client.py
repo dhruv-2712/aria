@@ -80,7 +80,7 @@ def call_groq(model: dict, prompt: str, expect_json: bool = True) -> dict | str:
                     {"role": "user", "content": prompt}
                 ],
                 temperature=temperature,
-                max_tokens=4096,
+                max_tokens=8192,
             )
 
             raw_text = response.choices[0].message.content.strip()
