@@ -193,18 +193,23 @@ header {
 
 .logo-wrap {
   display: flex; justify-content: center; align-items: center;
-  gap: 0.5rem; margin-bottom: 1rem; position: relative;
+  gap: 0.75rem; margin-bottom: 1rem; position: relative;
 }
 .logo-bracket {
-  font-family: var(--mono); font-size: 2.2rem; line-height: 1;
-  color: var(--accent2); opacity: 0.22;
-  transition: opacity 0.3s;
+  font-family: var(--mono); font-size: 2.8rem; line-height: 1;
+  color: var(--accent); opacity: 0.28;
+  transition: opacity 0.3s, color 0.3s;
+  /* align with visual midpoint of logo text */
+  padding-bottom: 0.1em;
 }
-.logo-wrap:hover .logo-bracket { opacity: 0.45; }
+.logo-wrap:hover .logo-bracket { opacity: 0.6; color: var(--accent2); }
 
 .logo {
   font-size: 4.75rem; font-weight: 700; letter-spacing: 0.65em;
-  padding-right: 0.65em; line-height: 1;
+  /* letter-spacing adds trailing gap after last char equal to its value;
+     compensate with matching padding-left so the text is optically centred */
+  padding-left: 0.65em;
+  line-height: 1;
   background: linear-gradient(135deg,
     #ffffff 0%,
     var(--accent3) 25%,
