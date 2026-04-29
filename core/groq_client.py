@@ -51,6 +51,8 @@ def _save_cache(key: str, response) -> None:
 
 
 def call_groq(model: dict, prompt: str, expect_json: bool = True) -> dict | str:
+    from core.config import MODEL_FAST, MODEL_SMART
+
     temperature = model.get("temperature", 0.2) if isinstance(model, dict) else 0.2
     model_name = model.get("model_name", MODEL_FAST) if isinstance(model, dict) else MODEL_FAST
 
@@ -103,11 +105,27 @@ def call_groq(model: dict, prompt: str, expect_json: bool = True) -> dict | str:
 
         except Exception as e:
             last_error = str(e)
+            err_lower = last_error.lower()
             print(f"[Groq] Attempt {attempt}/{MAX_RETRIES} — {last_error[:120]}")
 
-            if "rate_limit" in last_error.lower() or "429" in last_error:
-                print("[Groq] Rate limited — waiting 30s...")
-                time.sleep(30)
+            if "rate_limit" in err_lower or "429" in last_error:
+                # Daily token limit — fall back to fast model immediately
+                if "per day" in err_lower or "tpd" in err_lower:
+                    if model_name != MODEL_FAST:
+                        print(f"[Groq] Daily TPD limit on {model_name}, falling back to {MODEL_FAST}")
+                        model_name = MODEL_FAST
+                        key = _cache_key(model_name, prompt)
+                        cached = _load_cache(key)
+                        if cached is not None:
+                            return cached
+                        continue
+                    # Already on fast model and still hitting daily limit
+                    break
+                # Per-minute / per-request rate limit — wait and retry
+                wait = 30 if attempt < MAX_RETRIES else 0
+                print(f"[Groq] Rate limited — waiting {wait}s...")
+                if wait:
+                    time.sleep(wait)
                 continue
 
         if attempt < MAX_RETRIES:
