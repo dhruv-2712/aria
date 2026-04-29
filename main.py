@@ -41,8 +41,11 @@ def start_research(request: ResearchRequest):
 
     def run_job():
         try:
+            def push_status(status):
+                _jobs[session_id]["status"] = status
+
             orchestrator = Orchestrator()
-            result = orchestrator.run(request.query)
+            result = orchestrator.run(request.query, on_status=push_status)
             real_id = result.get("session_id", session_id)
             _jobs[session_id]["status"] = result.get("status", "failed")
             _jobs[session_id]["metadata"] = result.get("metadata", {})

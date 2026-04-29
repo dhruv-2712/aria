@@ -26,13 +26,21 @@ class Orchestrator:
         self.visualizer = VisualizerAgent()
         self.writer = WriterAgent()
 
-    def run(self, query: str) -> dict:
+    def run(self, query: str, on_status=None) -> dict:
         """
         Master entry point. Takes raw user query, runs all 8 agents,
         returns final report dict.
         """
         state = ARIAState(query=query)
         create_session(state.session_id, query)
+
+        # Wrap state.update_status so main.py gets live updates
+        _orig_update = state.update_status
+        def _update(status):
+            _orig_update(status)
+            if on_status:
+                on_status(status)
+        state.update_status = _update
 
         print(f"\n{'='*60}")
         print(f"ARIA — Starting Research Pipeline")
@@ -133,6 +141,9 @@ class Orchestrator:
 
                 synthesizer_output = synth_future.result()
                 state.store_output("synthesizer", synthesizer_output)
+
+                state.update_status("structuring")
+                update_session_status(state.session_id, "structuring")
 
                 visualizer_output = viz_future.result()
                 state.store_output("visualizer", visualizer_output)
