@@ -221,9 +221,9 @@ class Orchestrator:
         prompt = f"""
 ROLE: You are a research query specialist.
 
-TASK: Break this research question into 5-7 targeted web search queries.
+TASK: Break this research question into 4-5 targeted web search queries.
 Cover different angles: recent developments, statistics/data, expert criticism,
-historical context, economic impact, regional variation, future outlook.
+historical context, economic impact.
 
 RESEARCH QUESTION: {query}
 
@@ -234,13 +234,13 @@ Return ONLY a JSON array of query strings. No explanation. No markdown.
 RULES:
 - Each query must be web-search-friendly (concise, keyword-rich)
 - No duplicate angles — each query should retrieve different content
-- 5-7 queries total
+- 4-5 queries total
 """
         try:
             result = call_groq(model, prompt, expect_json=True)
             if isinstance(result, list) and len(result) >= 3:
                 print(f"[Orchestrator] Query decomposed into {len(result)} search queries")
-                return result[:7]
+                return result[:5]
         except Exception as e:
             print(f"[Orchestrator] Query decomposition failed: {e}")
 

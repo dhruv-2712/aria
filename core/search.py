@@ -69,7 +69,7 @@ def _ddg(query: str, max_results: int) -> list[dict]:
         return []
 
 
-def fetch_page(url: str, timeout: int = 8) -> str:
+def fetch_page(url: str, timeout: int = 4) -> str:
     """Fetch and clean page text. Returns '' on any failure."""
     if not url or url == "web_search":
         return ""

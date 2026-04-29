@@ -33,13 +33,17 @@ class ResearcherAgent:
 
         print(f"[Researcher] {len(all_results)} raw results — fetching page content...")
 
-        # Fetch full page text concurrently (best-effort, failures return "")
-        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as ex:
-            pages = list(ex.map(lambda r: fetch_page(r["url"]), all_results))
+        # Only fetch pages where snippet is too short to be useful
+        needs_fetch = [r for r in all_results if len(r.get("content") or r.get("snippet", "")) < 200]
+        skip_fetch  = [r for r in all_results if r not in needs_fetch]
+        print(f"[Researcher] Fetching {len(needs_fetch)} pages (skipping {len(skip_fetch)} with sufficient snippets)...")
 
-        for r, page_text in zip(all_results, pages):
-            if page_text:
-                r["content"] = page_text   # replace snippet with full text
+        if needs_fetch:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=15) as ex:
+                pages = list(ex.map(lambda r: fetch_page(r["url"]), needs_fetch))
+            for r, page_text in zip(needs_fetch, pages):
+                if page_text:
+                    r["content"] = page_text
 
         # LLM extraction: turn raw results into structured findings
         all_findings = self._extract_findings(all_results, original_query)

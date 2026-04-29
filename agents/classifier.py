@@ -109,8 +109,8 @@ RULES:
         return {d: [] for d in VALID_DOMAINS} | {"social": findings}
 
     def _identify_gaps(self, classified: dict) -> list:
-        # A gap = domain with fewer than 2 findings
-        return [domain for domain, items in classified.items() if len(items) < 2]
+        # A gap = domain with zero findings
+        return [domain for domain, items in classified.items() if len(items) == 0]
 
     def _generate_follow_up_queries(self, gaps: list, original_query: str) -> list:
         prompt = f"""
