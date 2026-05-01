@@ -55,6 +55,7 @@ def start_research(request: Request, body: ResearchRequest):
         "metadata": {},
         "report": None,
         "follow_ups": [],
+        "writer_input": None,
         "executive_tokens": [],
         "executive_complete": False,
         "standard_tokens": [],
@@ -85,8 +86,9 @@ def start_research(request: Request, body: ResearchRequest):
             _jobs[session_id]["report"] = result.get("report", {})
             _jobs[session_id]["follow_ups"] = result.get("follow_ups", [])
             _jobs[session_id]["real_session_id"] = real_id
+            _jobs[session_id]["writer_input"]      = result.get("writer_input")
             _jobs[session_id]["executive_complete"] = True
-            _jobs[session_id]["standard_complete"] = True
+            # standard_complete stays False until lazy generation runs
             _send_webhook(real_id, body.query, result.get("metadata", {}), result.get("follow_ups", []))
         except Exception as e:
             _jobs[session_id]["status"] = "failed"
@@ -115,6 +117,41 @@ def _send_webhook(session_id: str, query: str, metadata: dict, follow_ups: list)
         print(f"[API] Webhook sent to {WEBHOOK_URL}")
     except Exception as e:
         print(f"[API] Webhook failed: {e}")
+
+
+@app.post("/generate-standard/{session_id}")
+def generate_standard(session_id: str):
+    job = _jobs.get(session_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Session not found or expired")
+
+    if job.get("standard_complete"):
+        return {"status": "already_complete"}
+
+    writer_input = job.get("writer_input")
+    if not writer_input:
+        raise HTTPException(status_code=404, detail="Writer context unavailable for this session")
+
+    # Reset stream buffer for a fresh stream
+    job["standard_tokens"] = []
+    job["standard_complete"] = False
+
+    def run_standard():
+        from agents.writer import WriterAgent
+        writer = WriterAgent()
+
+        def on_token(t):
+            job["standard_tokens"].append(t)
+
+        real_id = job.get("real_session_id", session_id)
+        writer.generate_standard(real_id, writer_input, on_token=on_token)
+
+        job["standard_complete"] = True
+        if job.get("report") is not None:
+            job["report"]["standard"] = "".join(job["standard_tokens"])
+
+    threading.Thread(target=run_standard, daemon=True).start()
+    return {"status": "generating"}
 
 
 @app.get("/status/latest")

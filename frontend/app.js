@@ -234,6 +234,7 @@ function startStandardStream() {
       standardStreamSrc = null;
       standardDone = true;
       clearInterval(standardRenderTimer);
+      if (reportData) reportData.standard = standardBuffer;
       if (standardBuffer && currentTab === 'standard') {
         document.getElementById('reportContent').innerHTML = renderMarkdown(standardBuffer);
       }
@@ -345,6 +346,22 @@ function showTab(tab) {
     return;
   }
 
+  // Standard tab: lazy generation
+  if (tab === 'standard') {
+    if (standardBuffer) {
+      content.innerHTML = standardDone
+        ? renderMarkdown(standardBuffer)
+        : renderMarkdown(standardBuffer) + '<span class="stream-cursor"></span>';
+      return;
+    }
+    if (reportData.standard) {
+      content.innerHTML = renderMarkdown(reportData.standard);
+      return;
+    }
+    triggerStandardGeneration();
+    return;
+  }
+
   if (tab === 'citations') {
     const citations = reportData.citations_json
       ? JSON.parse(reportData.citations_json)
@@ -422,6 +439,25 @@ function printReport() {
   if (!reportData) return;
   showTab(currentTab);
   window.print();
+}
+
+async function triggerStandardGeneration() {
+  if (standardStreamSrc) return;
+  const content = document.getElementById('reportContent');
+  content.innerHTML = '<p style="color:var(--text-muted);font-family:var(--mono);font-size:0.82rem">// Generating full report<span class="stream-cursor"></span></p>';
+
+  try {
+    const res  = await fetch(`/generate-standard/${currentSessionId}`, { method: 'POST' });
+    const data = await res.json();
+    if (data.status === 'already_complete') {
+      const r = await (await fetch(`/report/${currentSessionId}`)).json();
+      if (r.standard) { reportData.standard = r.standard; showTab('standard'); }
+      return;
+    }
+    startStandardStream();
+  } catch {
+    content.innerHTML = '<p style="color:var(--error);font-family:var(--mono);font-size:0.82rem">// Full report generation failed.</p>';
+  }
 }
 
 async function copyShareLink() {

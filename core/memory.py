@@ -127,6 +127,17 @@ def save_report(session_id: str, executive: str, standard: str,
     conn.close()
 
 
+def update_report_standard(session_id: str, standard: str):
+    conn = _conn()
+    cur = conn.cursor()
+    cur.execute(
+        f"UPDATE reports SET standard={_P} WHERE session_id={_P}",
+        (standard, session_id),
+    )
+    conn.commit()
+    conn.close()
+
+
 def update_report_follow_ups(session_id: str, follow_ups: list):
     conn = _conn()
     cur = conn.cursor()

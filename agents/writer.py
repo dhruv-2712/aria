@@ -2,7 +2,7 @@
 import asyncio
 import time
 from core.groq_client import build_model, call_groq
-from core.memory import log_agent_call, save_report
+from core.memory import log_agent_call, save_report, update_report_standard
 
 
 class WriterAgent:
@@ -15,32 +15,40 @@ class WriterAgent:
         session_id = input_data["session_id"]
 
         start = time.time()
-        print("[Writer] Generating all 3 report formats in parallel...")
+        print("[Writer] Generating executive + technical (standard deferred)...")
 
         async def _gather():
             return await asyncio.gather(
                 asyncio.to_thread(self._write_executive, input_data),
-                asyncio.to_thread(self._write_standard, input_data),
                 asyncio.to_thread(self._write_technical, input_data),
             )
 
-        executive, standard, technical = asyncio.run(_gather())
+        executive, technical = asyncio.run(_gather())
 
         citations = self._compile_citations(input_data.get("findings", []))
 
         output = {
             "executive": executive,
-            "standard": standard,
+            "standard":  "",   # generated lazily when user opens that tab
             "technical": technical,
             "citations": citations,
             "status": "success"
         }
 
-        save_report(session_id, executive, standard, technical, citations)
+        save_report(session_id, executive, "", technical, citations)
         duration_ms = int((time.time() - start) * 1000)
         log_agent_call(session_id, self.agent_name, input_data, output, duration_ms)
         print(f"[Writer] Done in {duration_ms}ms. Report saved.")
         return output
+
+    def generate_standard(self, session_id: str, input_data: dict, on_token=None) -> str:
+        """Generate the standard report on-demand and persist it."""
+        if on_token:
+            input_data = {**input_data, "_on_standard_token": on_token}
+        standard = self._write_standard(input_data)
+        update_report_standard(session_id, standard)
+        print(f"[Writer] Standard report generated and saved for {session_id[:8]}.")
+        return standard
 
     def _build_context(self, input_data: dict) -> str:
         insights    = input_data.get("insights", [])

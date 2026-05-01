@@ -158,27 +158,30 @@ class Orchestrator:
             # === PHASE 7: WRITE ===
             state.update_status("writing")
             update_session_status(state.session_id, "writing")
+
+            writer_base_input = {
+                "session_id":       state.session_id,
+                "original_query":   query,
+                "insights":         insights,
+                "relationships":    analyst_output.get("relationships", []),
+                "findings":         all_findings,
+                "domains":          classifier_output["domains"],
+                "confidence":       analyst_output.get("confidence", 0.0),
+                "headline":         synthesizer_output.get("headline", ""),
+                "narrative":        synthesizer_output.get("narrative", ""),
+                "implications":     synthesizer_output.get("implications", []),
+                "connections":      synthesizer_output.get("connections", []),
+                "sections":         visualizer_output.get("sections", []),
+                "executive_summary": visualizer_output.get("executive_summary", ""),
+                "critiques":        devil_output.get("critiques", []),
+            }
+
             writer_output = self._run_with_retry(
                 "writer",
                 self.writer,
-                {
-                    "session_id": state.session_id,
-                    "original_query": query,
-                    "insights": insights,
-                    "relationships": analyst_output.get("relationships", []),
-                    "findings": all_findings,
-                    "domains": classifier_output["domains"],
-                    "confidence": analyst_output.get("confidence", 0.0),
-                    "headline": synthesizer_output.get("headline", ""),
-                    "narrative": synthesizer_output.get("narrative", ""),
-                    "implications": synthesizer_output.get("implications", []),
-                    "connections": synthesizer_output.get("connections", []),
-                    "sections": visualizer_output.get("sections", []),
-                    "executive_summary": visualizer_output.get("executive_summary", ""),
-                    "critiques": devil_output.get("critiques", []),
-                    "_on_executive_token": on_executive_token,
-                    "_on_standard_token":  on_standard_token,
-                },
+                {**writer_base_input,
+                 "_on_executive_token": on_executive_token,
+                 "_on_standard_token":  on_standard_token},
                 state
             )
             state.store_output("writer", writer_output)
@@ -196,10 +199,11 @@ class Orchestrator:
             print(f"{'='*60}")
 
             return {
-                "session_id": state.session_id,
-                "status": "done",
-                "report": writer_output,
-                "follow_ups": follow_ups,
+                "session_id":   state.session_id,
+                "status":       "done",
+                "report":       writer_output,
+                "follow_ups":   follow_ups,
+                "writer_input": writer_base_input,
                 "metadata": {
                     "total_findings": len(all_findings),
                     "insights_generated": len(insights),
