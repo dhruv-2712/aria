@@ -6,9 +6,9 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Groq](https://img.shields.io/badge/Groq-LLaMA_3.3_70B-f55036?style=flat-square)](https://groq.com)
 [![License](https://img.shields.io/badge/License-MIT-22c55e?style=flat-square)](LICENSE)
-[![Live Demo](https://img.shields.io/badge/Live_Demo-Render-6c63ff?style=flat-square&logo=render&logoColor=white)](https://aria-kdrg.onrender.com)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Render-6c63ff?style=flat-square&logo=render&logoColor=white)](https://aria-emh3.onrender.com)
 
-**[→ Try the live demo](https://aria-kdrg.onrender.com)**
+**[→ Try the live demo](https://aria-emh3.onrender.com)**
 *Free tier — may take ~15s to wake from sleep*
 
 </div>
