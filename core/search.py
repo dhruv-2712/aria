@@ -29,10 +29,10 @@ def _tavily(query: str, max_results: int) -> list[dict]:
         resp = httpx.post(
             "https://api.tavily.com/search",
             json={
-                "api_key": TAVILY_KEY,
-                "query": query,
-                "max_results": max_results,
-                "search_depth": "basic",
+                "api_key":            TAVILY_KEY,
+                "query":              query,
+                "max_results":        max_results,
+                "search_depth":       "basic",
                 "include_raw_content": False,
             },
             timeout=15,
@@ -43,6 +43,7 @@ def _tavily(query: str, max_results: int) -> list[dict]:
                 "url":     r.get("url", ""),
                 "snippet": r.get("content", ""),
                 "content": r.get("content", ""),
+                "_source": "tavily",   # skip page fetch — Tavily content is final
             }
             for r in resp.json().get("results", [])
         ]

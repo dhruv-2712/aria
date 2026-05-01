@@ -33,14 +33,19 @@ class ResearcherAgent:
 
         print(f"[Researcher] {len(all_results)} raw results — fetching page content...")
 
-        # Only fetch pages where snippet is too short to be useful
-        needs_fetch = [r for r in all_results if len(r.get("content") or r.get("snippet", "")) < 200]
-        skip_fetch  = [r for r in all_results if r not in needs_fetch]
-        print(f"[Researcher] Fetching {len(needs_fetch)} pages (skipping {len(skip_fetch)} with sufficient snippets)...")
+        # Tavily already returns full content — never re-fetch those pages.
+        # Only fetch pages for DDG results with short snippets.
+        needs_fetch = [
+            r for r in all_results
+            if r.get("_source") != "tavily"
+            and len(r.get("content") or r.get("snippet", "")) < 300
+        ]
+        skip_fetch = len(all_results) - len(needs_fetch)
+        print(f"[Researcher] Fetching {len(needs_fetch)} pages (skipping {skip_fetch})...")
 
         if needs_fetch:
             with concurrent.futures.ThreadPoolExecutor(max_workers=15) as ex:
-                pages = list(ex.map(lambda r: fetch_page(r["url"]), needs_fetch))
+                pages = list(ex.map(lambda r: fetch_page(r["url"], timeout=2), needs_fetch))
             for r, page_text in zip(needs_fetch, pages):
                 if page_text:
                     r["content"] = page_text
@@ -78,12 +83,12 @@ class ResearcherAgent:
             return []
 
         results_text = ""
-        for i, r in enumerate(results[:20]):  # cap to avoid token overflow
+        for i, r in enumerate(results[:18]):  # cap to avoid token overflow
             snippet = r.get("content") or r.get("snippet", "")
             results_text += (
                 f"\n[{i+1}] URL: {r.get('url', 'unknown')}\n"
                 f"Title: {r.get('title', '')}\n"
-                f"Content: {snippet[:600]}\n"
+                f"Content: {snippet[:400]}\n"
             )
 
         prompt = f"""
