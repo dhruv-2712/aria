@@ -3,17 +3,23 @@ import json
 import os
 import threading
 import uuid
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from core.memory import (
     init_db, get_session, get_session_logs, get_report, get_all_sessions
 )
 from orchestrator import Orchestrator
 import asyncio
 
+limiter = Limiter(key_func=get_remote_address, default_limits=[])
 app = FastAPI(title="ARIA Research API", version="2.0.0")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
 
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "")
@@ -38,8 +44,9 @@ def serve_frontend():
 
 
 @app.post("/research")
-def start_research(request: ResearchRequest):
-    if not request.query.strip():
+@limiter.limit("5/hour")
+def start_research(request: Request, body: ResearchRequest):
+    if not body.query.strip():
         raise HTTPException(status_code=400, detail="Query cannot be empty")
 
     session_id = str(uuid.uuid4())
@@ -62,7 +69,7 @@ def start_research(request: ResearchRequest):
 
             orchestrator = Orchestrator()
             result = orchestrator.run(
-                request.query,
+                body.query,
                 on_status=push_status,
                 on_executive_token=on_token,
             )
@@ -73,7 +80,7 @@ def start_research(request: ResearchRequest):
             _jobs[session_id]["follow_ups"] = result.get("follow_ups", [])
             _jobs[session_id]["real_session_id"] = real_id
             _jobs[session_id]["executive_complete"] = True
-            _send_webhook(real_id, request.query, result.get("metadata", {}), result.get("follow_ups", []))
+            _send_webhook(real_id, body.query, result.get("metadata", {}), result.get("follow_ups", []))
         except Exception as e:
             _jobs[session_id]["status"] = "failed"
             _jobs[session_id]["error"] = str(e)
@@ -81,7 +88,7 @@ def start_research(request: ResearchRequest):
             print(f"[API] Job failed: {e}")
 
     threading.Thread(target=run_job, daemon=True).start()
-    return {"session_id": session_id, "message": "Research job started", "query": request.query}
+    return {"session_id": session_id, "message": "Research job started", "query": body.query}
 
 
 def _send_webhook(session_id: str, query: str, metadata: dict, follow_ups: list):
