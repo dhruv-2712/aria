@@ -202,6 +202,9 @@
             <button class="action-btn" onclick="printReport()" title="Print / Save PDF">
               ↓ PDF
             </button>
+            <button class="action-btn" id="shareBtn" onclick="copyShareLink()" title="Copy shareable link">
+              ⬡ SHARE
+            </button>
             <button class="new-research-btn" onclick="resetUI()">⟲ NEW QUERY</button>
           </div>
         </div>
@@ -223,7 +226,14 @@
         </button>
       </div>
 
+      <div id="printHeader" class="print-header-only"></div>
+
       <div class="report-content" id="reportContent"></div>
+
+      <div id="followUpsSection" class="follow-ups hidden">
+        <div class="follow-ups-label">SUGGESTED FOLLOW-UP QUERIES</div>
+        <div class="follow-ups-list" id="followUpsList"></div>
+      </div>
     </section>
 
   </div>

@@ -22,6 +22,7 @@ const STATUS_TO_STAGE = {
 };
 
 let currentSessionId  = null;
+let currentQuery      = '';
 let currentTab        = 'executive';
 let reportData        = null;
 let streamingBuffer   = '';
@@ -47,11 +48,13 @@ function setQuery(el) {
 async function startResearch() {
   const query = document.getElementById('queryInput').value.trim();
   if (!query) return;
+  currentQuery = query;
 
   document.getElementById('submitBtn').disabled = true;
   document.getElementById('querySection').classList.add('hidden');
   document.getElementById('pipelineSection').classList.remove('hidden');
   document.getElementById('reportSection').classList.add('hidden');
+  document.getElementById('followUpsSection').classList.add('hidden');
 
   resetAgentCards();
   streamingBuffer = '';
@@ -260,6 +263,20 @@ async function loadReport(sessionId) {
     document.getElementById('pipelineSection').classList.add('hidden');
     document.getElementById('reportSection').classList.remove('hidden');
 
+    // Print header (shown only when printing)
+    const ph = document.getElementById('printHeader');
+    if (ph) ph.textContent = 'ARIA Intelligence Report: ' + (currentQuery || '');
+
+    // Follow-up suggestions
+    const followUps = reportData.follow_ups || [];
+    if (followUps.length) {
+      const list = document.getElementById('followUpsList');
+      list.innerHTML = followUps.map(q => `
+        <button class="follow-up-item" onclick="startFollowUp(${JSON.stringify(q)})">${escapeHtml(q)}</button>
+      `).join('');
+      document.getElementById('followUpsSection').classList.remove('hidden');
+    }
+
     // Clear any streaming artifacts and render properly
     clearInterval(streamRenderTimer);
     showTab('executive');
@@ -364,9 +381,30 @@ function downloadMarkdown() {
 
 function printReport() {
   if (!reportData) return;
-  // Ensure executive tab is shown for print (most readable)
   showTab(currentTab);
   window.print();
+}
+
+async function copyShareLink() {
+  if (!currentSessionId) return;
+  const url = window.location.origin + '/r/' + currentSessionId;
+  try {
+    await navigator.clipboard.writeText(url);
+    const btn = document.getElementById('shareBtn');
+    const orig = btn.textContent;
+    btn.textContent = '✓ COPIED';
+    btn.style.color = 'var(--success)';
+    btn.style.borderColor = 'rgba(0,230,118,0.4)';
+    setTimeout(() => { btn.textContent = orig; btn.style.color = ''; btn.style.borderColor = ''; }, 2000);
+  } catch {
+    window.prompt('Share this link:', window.location.origin + '/r/' + currentSessionId);
+  }
+}
+
+function startFollowUp(query) {
+  resetUI();
+  document.getElementById('queryInput').value = query;
+  currentQuery = query;
 }
 
 // ── History ───────────────────────────────────────────────────────
@@ -438,6 +476,15 @@ async function loadHistoricalReport(sessionId) {
         <div class="stat-value">${s.value}</div>
       </div>`).join('');
 
+    const followUps = reportData.follow_ups || [];
+    if (followUps.length) {
+      const list = document.getElementById('followUpsList');
+      list.innerHTML = followUps.map(q => `
+        <button class="follow-up-item" onclick="startFollowUp(${JSON.stringify(q)})">${escapeHtml(q)}</button>
+      `).join('');
+      document.getElementById('followUpsSection').classList.remove('hidden');
+    }
+
     document.getElementById('submitBtn').disabled = false;
     showTab('executive');
   } catch (err) {
@@ -453,6 +500,7 @@ function escapeHtml(str) {
 // ── Reset ─────────────────────────────────────────────────────────
 function resetUI() {
   currentSessionId  = null;
+  currentQuery      = '';
   reportData        = null;
   streamingBuffer   = '';
   streamingDone     = false;
@@ -464,6 +512,7 @@ function resetUI() {
   document.getElementById('querySection').classList.remove('hidden');
   document.getElementById('pipelineSection').classList.add('hidden');
   document.getElementById('reportSection').classList.add('hidden');
+  document.getElementById('followUpsSection').classList.add('hidden');
   resetAgentCards();
 }
 

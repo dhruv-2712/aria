@@ -3,7 +3,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from core.state import ARIAState
 from core.config import MAX_RESEARCH_LOOPS, MAX_CRITIQUE_LOOPS
-from core.memory import init_db, create_session, update_session_status, log_agent_call
+from core.memory import init_db, create_session, update_session_status, log_agent_call, update_report_follow_ups
 from core.dedup import deduplicate_findings
 from agents.researcher import ResearcherAgent
 from agents.classifier import ClassifierAgent
@@ -182,6 +182,11 @@ class Orchestrator:
             )
             state.store_output("writer", writer_output)
 
+            # === FOLLOW-UP SUGGESTIONS ===
+            follow_ups = self._generate_follow_ups(query, synthesizer_output.get("headline", ""))
+            if follow_ups:
+                update_report_follow_ups(state.session_id, follow_ups)
+
             state.update_status("done")
             update_session_status(state.session_id, "done")
 
@@ -193,6 +198,7 @@ class Orchestrator:
                 "session_id": state.session_id,
                 "status": "done",
                 "report": writer_output,
+                "follow_ups": follow_ups,
                 "metadata": {
                     "total_findings": len(all_findings),
                     "insights_generated": len(insights),
@@ -213,6 +219,26 @@ class Orchestrator:
                 "error": str(e),
                 "partial_outputs": state.agent_outputs
             }
+
+    def _generate_follow_ups(self, query: str, headline: str) -> list:
+        """Generate 3 follow-up research questions after the pipeline completes."""
+        from core.groq_client import build_model, call_groq
+        model = build_model(temperature=0.5)
+        prompt = f"""Research just completed on: "{query}"
+Key headline finding: {headline}
+
+Generate exactly 3 follow-up research questions that would deepen understanding of this topic.
+Each must explore a different angle not fully addressed above.
+
+Return ONLY a JSON array of 3 question strings. No explanation.
+["question 1", "question 2", "question 3"]"""
+        try:
+            result = call_groq(model, prompt, expect_json=True)
+            if isinstance(result, list):
+                return [str(q) for q in result[:3]]
+        except Exception as e:
+            print(f"[Orchestrator] Follow-up generation failed: {e}")
+        return []
 
     def _generate_search_queries(self, query: str) -> list:
         """Use LLM to decompose the query into 5-7 targeted web-search strings."""
