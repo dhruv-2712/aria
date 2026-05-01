@@ -8,7 +8,7 @@ MAX_REVISION_LOOPS = 2
 
 class DevilsAdvocateAgent:
     def __init__(self):
-        self.model = build_model(temperature=0.2, smart=True)
+        self.model = build_model(temperature=0.2, smart=False)
         self.agent_name = "devil"
 
     def run(self, input_data: dict) -> dict:

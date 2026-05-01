@@ -29,6 +29,10 @@ let streamingBuffer   = '';
 let streamingDone     = false;
 let streamRenderTimer = null;
 let reportStreamSrc   = null;
+let standardBuffer    = '';
+let standardDone      = false;
+let standardStreamSrc = null;
+let standardRenderTimer = null;
 
 // ── Clock ────────────────────────────────────────────────────────
 function updateClock() {
@@ -151,9 +155,10 @@ function updatePipelineUI(status) {
   setProgress(stage.progress);
   setLog(stage.label + '...');
 
-  // When writer starts, open report section and begin streaming
+  // When writer starts, open report section and begin streaming both reports
   if (stageId === 'writer' && currentSessionId) {
     startReportStream();
+    startStandardStream();
   }
 }
 
@@ -213,6 +218,39 @@ function startReportStream() {
   streamRenderTimer = setInterval(() => {
     if (streamingBuffer && !streamingDone && currentTab === 'executive') {
       _setStreamingContent(streamingBuffer);
+    }
+  }, 150);
+}
+
+function startStandardStream() {
+  if (standardStreamSrc) return;
+
+  standardStreamSrc = new EventSource(`/stream-standard-report/${currentSessionId}`);
+
+  standardStreamSrc.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+    if (data.done) {
+      standardStreamSrc.close();
+      standardStreamSrc = null;
+      standardDone = true;
+      clearInterval(standardRenderTimer);
+      if (standardBuffer && currentTab === 'standard') {
+        document.getElementById('reportContent').innerHTML = renderMarkdown(standardBuffer);
+      }
+    } else if (data.token) {
+      standardBuffer += data.token;
+    }
+  };
+
+  standardStreamSrc.onerror = () => {
+    if (standardStreamSrc) { standardStreamSrc.close(); standardStreamSrc = null; }
+    clearInterval(standardRenderTimer);
+  };
+
+  standardRenderTimer = setInterval(() => {
+    if (standardBuffer && !standardDone && currentTab === 'standard') {
+      document.getElementById('reportContent').innerHTML =
+        renderMarkdown(standardBuffer) + '<span class="stream-cursor"></span>';
     }
   }, 150);
 }
@@ -297,9 +335,10 @@ function showTab(tab) {
   content.classList.remove('is-technical');
 
   if (!reportData) {
-    // Still streaming — show buffer if executive, else placeholder
     if (tab === 'executive' && streamingBuffer) {
       _setStreamingContent(streamingBuffer);
+    } else if (tab === 'standard' && standardBuffer) {
+      content.innerHTML = renderMarkdown(standardBuffer) + '<span class="stream-cursor"></span>';
     } else {
       content.innerHTML = '<p style="color:var(--text-muted);font-family:var(--mono);font-size:0.82rem">// Generating...</p>';
     }
@@ -504,8 +543,12 @@ function resetUI() {
   reportData        = null;
   streamingBuffer   = '';
   streamingDone     = false;
+  standardBuffer    = '';
+  standardDone      = false;
   clearInterval(streamRenderTimer);
-  if (reportStreamSrc) { reportStreamSrc.close(); reportStreamSrc = null; }
+  clearInterval(standardRenderTimer);
+  if (reportStreamSrc)   { reportStreamSrc.close();   reportStreamSrc   = null; }
+  if (standardStreamSrc) { standardStreamSrc.close(); standardStreamSrc = null; }
 
   document.getElementById('queryInput').value   = '';
   document.getElementById('submitBtn').disabled = false;

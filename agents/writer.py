@@ -148,6 +148,8 @@ RULES:
         return call_groq(self.model, prompt, expect_json=False)
 
     def _write_standard(self, input_data: dict) -> str:
+        from core.groq_client import stream_groq
+        callback = input_data.get("_on_standard_token")
         context  = self._build_context(input_data)
         domains  = input_data.get("domains", {})
         findings = input_data.get("findings", [])
@@ -229,6 +231,8 @@ RULES:
 - No padding or filler — every sentence must add information
 - Specific names, mechanisms, data points where available
 """
+        if callback:
+            return stream_groq(self.model, prompt, callback=callback)
         return call_groq(self.model, prompt, expect_json=False)
 
     def _write_technical(self, input_data: dict) -> str:

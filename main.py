@@ -57,6 +57,8 @@ def start_research(request: Request, body: ResearchRequest):
         "follow_ups": [],
         "executive_tokens": [],
         "executive_complete": False,
+        "standard_tokens": [],
+        "standard_complete": False,
     }
 
     def run_job():
@@ -67,11 +69,15 @@ def start_research(request: Request, body: ResearchRequest):
             def on_token(t):
                 _jobs[session_id]["executive_tokens"].append(t)
 
+            def on_standard_token(t):
+                _jobs[session_id]["standard_tokens"].append(t)
+
             orchestrator = Orchestrator()
             result = orchestrator.run(
                 body.query,
                 on_status=push_status,
                 on_executive_token=on_token,
+                on_standard_token=on_standard_token,
             )
             real_id = result.get("session_id", session_id)
             _jobs[session_id]["status"] = result.get("status", "failed")
@@ -80,11 +86,13 @@ def start_research(request: Request, body: ResearchRequest):
             _jobs[session_id]["follow_ups"] = result.get("follow_ups", [])
             _jobs[session_id]["real_session_id"] = real_id
             _jobs[session_id]["executive_complete"] = True
+            _jobs[session_id]["standard_complete"] = True
             _send_webhook(real_id, body.query, result.get("metadata", {}), result.get("follow_ups", []))
         except Exception as e:
             _jobs[session_id]["status"] = "failed"
             _jobs[session_id]["error"] = str(e)
             _jobs[session_id]["executive_complete"] = True
+            _jobs[session_id]["standard_complete"] = True
             print(f"[API] Job failed: {e}")
 
     threading.Thread(target=run_job, daemon=True).start()
@@ -177,6 +185,26 @@ async def stream_report(session_id: str):
                 pos += 1
                 await asyncio.sleep(0)
             if job.get("executive_complete") and pos >= len(tokens):
+                yield f"data: {json.dumps({'done': True})}\n\n"
+                break
+    return StreamingResponse(generator(), media_type="text/event-stream")
+
+
+@app.get("/stream-standard-report/{session_id}")
+async def stream_standard_report(session_id: str):
+    async def generator():
+        pos = 0
+        for _ in range(900):          # 15-minute ceiling for long standard reports
+            await asyncio.sleep(0.1)
+            if session_id not in _jobs:
+                break
+            job    = _jobs[session_id]
+            tokens = job.get("standard_tokens", [])
+            while pos < len(tokens):
+                yield f"data: {json.dumps({'token': tokens[pos]})}\n\n"
+                pos += 1
+                await asyncio.sleep(0)
+            if job.get("standard_complete") and pos >= len(tokens):
                 yield f"data: {json.dumps({'done': True})}\n\n"
                 break
     return StreamingResponse(generator(), media_type="text/event-stream")

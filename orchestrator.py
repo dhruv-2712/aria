@@ -27,7 +27,7 @@ class Orchestrator:
         self.visualizer = VisualizerAgent()
         self.writer = WriterAgent()
 
-    def run(self, query: str, on_status=None, on_executive_token=None) -> dict:
+    def run(self, query: str, on_status=None, on_executive_token=None, on_standard_token=None) -> dict:
         """
         Master entry point. Takes raw user query, runs all 8 agents,
         returns final report dict.
@@ -177,6 +177,7 @@ class Orchestrator:
                     "executive_summary": visualizer_output.get("executive_summary", ""),
                     "critiques": devil_output.get("critiques", []),
                     "_on_executive_token": on_executive_token,
+                    "_on_standard_token":  on_standard_token,
                 },
                 state
             )
