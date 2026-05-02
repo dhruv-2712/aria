@@ -37,7 +37,8 @@ class WriterAgent:
 
         save_report(session_id, executive, "", technical, citations)
         duration_ms = int((time.time() - start) * 1000)
-        log_agent_call(session_id, self.agent_name, input_data, output, duration_ms)
+        loggable_input = {k: v for k, v in input_data.items() if not k.startswith('_on_')}
+        log_agent_call(session_id, self.agent_name, loggable_input, output, duration_ms)
         print(f"[Writer] Done in {duration_ms}ms. Report saved.")
         return output
 
