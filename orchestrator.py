@@ -27,13 +27,15 @@ class Orchestrator:
         self.visualizer = VisualizerAgent()
         self.writer = WriterAgent()
 
-    def run(self, query: str, on_status=None, on_executive_token=None, on_standard_token=None) -> dict:
+    def run(self, query: str, on_status=None, on_executive_token=None, on_standard_token=None, on_session_id=None) -> dict:
         """
         Master entry point. Takes raw user query, runs all 8 agents,
         returns final report dict.
         """
         state = ARIAState(query=query)
         create_session(state.session_id, query)
+        if on_session_id:
+            on_session_id(state.session_id)
 
         # Wrap state.update_status so main.py gets live updates
         _orig_update = state.update_status
@@ -186,13 +188,13 @@ class Orchestrator:
             )
             state.store_output("writer", writer_output)
 
-            # === FOLLOW-UP SUGGESTIONS ===
+            state.update_status("done")
+            update_session_status(state.session_id, "done")
+
+            # === FOLLOW-UP SUGGESTIONS (non-blocking — status already "done") ===
             follow_ups = self._generate_follow_ups(query, synthesizer_output.get("headline", ""))
             if follow_ups:
                 update_report_follow_ups(state.session_id, follow_ups)
-
-            state.update_status("done")
-            update_session_status(state.session_id, "done")
 
             print(f"\n{'='*60}")
             print("ARIA — Pipeline Complete")

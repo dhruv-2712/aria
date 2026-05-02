@@ -31,6 +31,14 @@ class ResearcherAgent:
                 r["query_index"] = idx + 1
                 all_results.append(r)
 
+        # URL-level dedup before fetch/extraction
+        seen_raw, deduped = set(), []
+        for r in all_results:
+            u = r.get("url", "")
+            if u and u not in seen_raw:
+                seen_raw.add(u)
+                deduped.append(r)
+        all_results = deduped
         print(f"[Researcher] {len(all_results)} raw results — fetching page content...")
 
         # Tavily already returns full content — never re-fetch those pages.

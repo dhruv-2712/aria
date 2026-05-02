@@ -54,6 +54,7 @@ async function startResearch() {
   if (!query) return;
   currentQuery = query;
 
+  document.title = 'ARIA — Analyzing...';
   document.getElementById('submitBtn').disabled = true;
   document.getElementById('querySection').classList.add('hidden');
   document.getElementById('pipelineSection').classList.remove('hidden');
@@ -102,8 +103,12 @@ function startStreaming() {
       await loadReport(currentSessionId);
     } else if (data.status === 'failed') {
       evtSource.close();
-      setLog('ERROR: Pipeline encountered a failure.');
+      const errRes = await fetch(`/status/${currentSessionId}`).catch(() => null);
+      const errData = errRes ? await errRes.json().catch(() => {}) : {};
+      const errMsg = errData.error ? `ERROR: ${errData.error}` : 'ERROR: Pipeline encountered a failure.';
+      setLog(errMsg);
       document.getElementById('submitBtn').disabled = false;
+      document.title = 'ARIA — Autonomous Research Intelligence';
     }
   };
 
@@ -120,7 +125,10 @@ function startStreaming() {
           await loadReport(currentSessionId);
         } else if (data.status === 'failed') {
           clearInterval(interval);
-          setLog('ERROR: Pipeline failed.');
+          const errMsg = data.error ? `ERROR: ${data.error}` : 'ERROR: Pipeline failed.';
+          setLog(errMsg);
+          document.getElementById('submitBtn').disabled = false;
+          document.title = 'ARIA — Autonomous Research Intelligence';
         }
       } catch (_) {}
     }, 2500);
@@ -301,6 +309,7 @@ async function loadReport(sessionId) {
 
     document.getElementById('pipelineSection').classList.add('hidden');
     document.getElementById('reportSection').classList.remove('hidden');
+    document.title = 'ARIA — ' + currentQuery;
 
     // Print header (shown only when printing)
     const ph = document.getElementById('printHeader');
@@ -476,6 +485,26 @@ async function copyShareLink() {
   }
 }
 
+async function copyReport() {
+  if (!reportData) return;
+  const text = currentTab === 'citations'
+    ? (reportData.citations_json ? JSON.parse(reportData.citations_json) : (reportData.citations || []))
+        .map((c, i) => `[${i+1}] ${c.url}`).join('\n')
+    : (reportData[currentTab] || '');
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+    const btn = document.getElementById('copyReportBtn');
+    const orig = btn.textContent;
+    btn.textContent = '✓ COPIED';
+    btn.style.color = 'var(--success)';
+    btn.style.borderColor = 'rgba(0,230,118,0.4)';
+    setTimeout(() => { btn.textContent = orig; btn.style.color = ''; btn.style.borderColor = ''; }, 2000);
+  } catch {
+    window.prompt('Copy this report text:', text.slice(0, 500) + '...');
+  }
+}
+
 function startFollowUp(query) {
   resetUI();
   document.getElementById('queryInput').value = query;
@@ -574,6 +603,7 @@ function escapeHtml(str) {
 
 // ── Reset ─────────────────────────────────────────────────────────
 function resetUI() {
+  document.title = 'ARIA — Autonomous Research Intelligence';
   currentSessionId  = null;
   currentQuery      = '';
   reportData        = null;

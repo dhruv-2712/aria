@@ -24,6 +24,8 @@ app.mount("/static", StaticFiles(directory="frontend"), name="static")
 
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "")
 
+MAX_CONCURRENT_JOBS = 3
+
 # session_id → {status, metadata, report, follow_ups, executive_tokens, executive_complete}
 _jobs: dict = {}
 
@@ -49,6 +51,10 @@ def start_research(request: Request, body: ResearchRequest):
     if not body.query.strip():
         raise HTTPException(status_code=400, detail="Query cannot be empty")
 
+    active = sum(1 for j in _jobs.values() if j["status"] not in ("done", "failed"))
+    if active >= MAX_CONCURRENT_JOBS:
+        raise HTTPException(status_code=429, detail=f"Server busy — {MAX_CONCURRENT_JOBS} jobs already running. Try again in a moment.")
+
     session_id = str(uuid.uuid4())
     _jobs[session_id] = {
         "status": "researching",
@@ -73,12 +79,16 @@ def start_research(request: Request, body: ResearchRequest):
             def on_standard_token(t):
                 _jobs[session_id]["standard_tokens"].append(t)
 
+            def on_session_id(real_id):
+                _jobs[session_id]["real_session_id"] = real_id
+
             orchestrator = Orchestrator()
             result = orchestrator.run(
                 body.query,
                 on_status=push_status,
                 on_executive_token=on_token,
                 on_standard_token=on_standard_token,
+                on_session_id=on_session_id,
             )
             real_id = result.get("session_id", session_id)
             _jobs[session_id]["status"] = result.get("status", "failed")
@@ -168,7 +178,10 @@ def get_status(session_id: str):
     if session_id not in _jobs:
         raise HTTPException(status_code=404, detail="Session not found")
     job = _jobs[session_id]
-    return {"session_id": session_id, "status": job["status"], "metadata": job.get("metadata", {})}
+    resp = {"session_id": session_id, "status": job["status"], "metadata": job.get("metadata", {})}
+    if job.get("error"):
+        resp["error"] = job["error"]
+    return resp
 
 
 @app.get("/report/{session_id}")
@@ -273,6 +286,14 @@ _SHARE_TEMPLATE = r"""<!DOCTYPE html>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ARIA · ARIA_QUERY_TOKEN</title>
+  <meta name="description" content="AI-generated intelligence report: ARIA_QUERY_TOKEN">
+  <meta property="og:title" content="ARIA · ARIA_QUERY_TOKEN">
+  <meta property="og:description" content="AI-generated intelligence report powered by ARIA Autonomous Research Pipeline">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="ARIA_URL_TOKEN">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="ARIA · ARIA_QUERY_TOKEN">
+  <meta name="twitter:description" content="AI-generated intelligence report powered by ARIA Autonomous Research Pipeline">
   <style>
     :root{--acc:#00cff5;--bg:#010407;--bg2:rgba(4,12,24,0.9);--text:#c5e4f5;--muted:#4580a0;--faint:#224055;--mono:ui-monospace,'JetBrains Mono',monospace;}
     *{box-sizing:border-box;margin:0;padding:0;}
@@ -382,5 +403,6 @@ def share_report_page(session_id: str):
     html = (_SHARE_TEMPLATE
             .replace("ARIA_QUERY_TOKEN",       query_safe)
             .replace("ARIA_DATE_TOKEN",        created_at)
+            .replace("ARIA_URL_TOKEN",         f"https://aria-emh3.onrender.com/r/{session_id}")
             .replace("ARIA_REPORT_JSON_TOKEN", json.dumps(report_payload)))
     return HTMLResponse(html)
