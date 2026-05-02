@@ -67,10 +67,22 @@ class Orchestrator:
             )
             state.store_output("researcher", research_output)
 
-            # === PHASE 2: CLASSIFY (instant — pass findings straight through) ===
+            # === PHASE 2: CLASSIFY ===
             state.update_status("classifying")
             update_session_status(state.session_id, "classifying")
             all_findings = deduplicate_findings(research_output["findings"])
+            classifier_output = self._run_with_retry(
+                "classifier",
+                self.classifier,
+                {
+                    "session_id":     state.session_id,
+                    "findings":       all_findings,
+                    "original_query": query,
+                    "loop_count":     0
+                },
+                state
+            )
+            state.store_output("classifier", classifier_output)
 
             # === PHASE 3: ANALYZE ===
             state.update_status("analyzing")
@@ -88,31 +100,65 @@ class Orchestrator:
             state.store_output("analyst", analyst_output)
             insights = analyst_output.get("insights", [])
 
-            # === PHASE 4: CRITIQUE (instant — skipped for speed) ===
+            # === PHASE 4: CRITIQUE ===
             state.update_status("critiquing")
             update_session_status(state.session_id, "critiquing")
-
-            # === PHASE 5: SYNTHESIZE ===
-            state.update_status("synthesizing")
-            update_session_status(state.session_id, "synthesizing")
-            synthesizer_output = self._run_with_retry(
-                "synthesizer",
-                self.synthesizer,
+            devil_output = self._run_with_retry(
+                "devil",
+                self.devil,
                 {
-                    "session_id":           state.session_id,
-                    "insights":             insights,
-                    "relationships":        analyst_output.get("relationships", []),
-                    "critiques":            [],
-                    "missing_perspectives": [],
-                    "original_query":       query
+                    "session_id":     state.session_id,
+                    "insights":       insights,
+                    "relationships":  analyst_output.get("relationships", []),
+                    "original_query": query,
+                    "revision_count": 0
                 },
                 state
             )
-            state.store_output("synthesizer", synthesizer_output)
+            state.store_output("devil", devil_output)
 
-            # === PHASE 6: STRUCTURE (instant — skipped for speed) ===
-            state.update_status("structuring")
-            update_session_status(state.session_id, "structuring")
+            # === PHASE 5+6: SYNTHESIZE + STRUCTURE (parallel) ===
+            state.update_status("synthesizing")
+            update_session_status(state.session_id, "synthesizing")
+
+            def run_synthesizer():
+                return self._run_with_retry(
+                    "synthesizer", self.synthesizer,
+                    {
+                        "session_id":           state.session_id,
+                        "insights":             insights,
+                        "relationships":        analyst_output.get("relationships", []),
+                        "critiques":            devil_output.get("critiques", []),
+                        "missing_perspectives": devil_output.get("missing_perspectives", []),
+                        "original_query":       query
+                    },
+                    state
+                )
+
+            def run_visualizer():
+                return self._run_with_retry(
+                    "visualizer", self.visualizer,
+                    {
+                        "session_id":   state.session_id,
+                        "headline":     "",
+                        "narrative":    "",
+                        "implications": [],
+                        "connections":  [],
+                        "insights":     insights,
+                        "original_query": query
+                    },
+                    state
+                )
+
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                synth_future = executor.submit(run_synthesizer)
+                viz_future   = executor.submit(run_visualizer)
+                synthesizer_output = synth_future.result()
+                state.store_output("synthesizer", synthesizer_output)
+                state.update_status("structuring")
+                update_session_status(state.session_id, "structuring")
+                visualizer_output = viz_future.result()
+                state.store_output("visualizer", visualizer_output)
 
             # === PHASE 7: WRITE ===
             state.update_status("writing")
@@ -124,15 +170,15 @@ class Orchestrator:
                 "insights":          insights,
                 "relationships":     analyst_output.get("relationships", []),
                 "findings":          all_findings,
-                "domains":           {},
+                "domains":           classifier_output.get("domains", {}),
                 "confidence":        analyst_output.get("confidence", 0.0),
                 "headline":          synthesizer_output.get("headline", ""),
                 "narrative":         synthesizer_output.get("narrative", ""),
                 "implications":      synthesizer_output.get("implications", []),
                 "connections":       synthesizer_output.get("connections", []),
-                "sections":          [],
-                "executive_summary": "",
-                "critiques":         [],
+                "sections":          visualizer_output.get("sections", []),
+                "executive_summary": visualizer_output.get("executive_summary", ""),
+                "critiques":         devil_output.get("critiques", []),
             }
 
             writer_output = self._run_with_retry(
@@ -167,7 +213,7 @@ class Orchestrator:
                     "total_findings": len(all_findings),
                     "insights_generated": len(insights),
                     "pipeline_confidence": analyst_output.get("confidence", 0.0),
-                    "weak_claims_ratio": 0.0,
+                    "weak_claims_ratio": devil_output.get("weak_ratio", 0.0),
                     "cross_domain_connections": synthesizer_output.get("connection_count", 0)
                 }
             }
