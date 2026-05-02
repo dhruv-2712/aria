@@ -1,5 +1,4 @@
 # agents/writer.py
-import asyncio
 import time
 from core.groq_client import build_model, call_groq
 from core.memory import log_agent_call, save_report, update_report_standard
@@ -17,13 +16,8 @@ class WriterAgent:
         start = time.time()
         print("[Writer] Generating executive + technical (standard deferred)...")
 
-        async def _gather():
-            return await asyncio.gather(
-                asyncio.to_thread(self._write_executive, input_data),
-                asyncio.to_thread(self._write_technical, input_data),
-            )
-
-        executive, technical = asyncio.run(_gather())
+        executive = self._write_executive(input_data)
+        technical = self._write_technical(input_data)
 
         citations = self._compile_citations(input_data.get("findings", []))
 
