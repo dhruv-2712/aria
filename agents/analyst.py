@@ -88,7 +88,12 @@ RULES:
 - Write claims as declarative statements of fact or finding
 """
         result = call_groq(self.model, prompt, expect_json=True)
+        if isinstance(result, dict) and "insights" in result:
+            return result["insights"]
 
+        # Smart model failed — retry with fast model
+        print("[Analyst] Smart model extraction failed, retrying with fast model...")
+        result = call_groq(self.model_fast, prompt, expect_json=True)
         if isinstance(result, dict) and "insights" in result:
             return result["insights"]
         return []

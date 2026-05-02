@@ -90,10 +90,7 @@ class Orchestrator:
                 state
             )
             if analyst_output.get("insight_count", 0) == 0:
-                raise ValueError(
-                    "Analyst returned 0 insights — research data is insufficient. "
-                    "Try a more specific query."
-                )
+                print("[Orchestrator] Warning: analyst returned 0 insights — continuing with empty set.")
             state.store_output("analyst", analyst_output)
 
             # === PHASE 4: CRITIQUE (with revision loop) ===

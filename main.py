@@ -92,6 +92,8 @@ def start_research(request: Request, body: ResearchRequest):
             )
             real_id = result.get("session_id", session_id)
             _jobs[session_id]["status"] = result.get("status", "failed")
+            if result.get("error"):
+                _jobs[session_id]["error"] = result["error"]
             _jobs[session_id]["metadata"] = result.get("metadata", {})
             _jobs[session_id]["report"] = result.get("report", {})
             _jobs[session_id]["follow_ups"] = result.get("follow_ups", [])
