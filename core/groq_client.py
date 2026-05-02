@@ -84,7 +84,7 @@ def stream_groq(model: dict, prompt: str, callback=None) -> str:
                 {"role": "user", "content": prompt},
             ],
             temperature=temperature,
-            max_tokens=8192,
+            max_tokens=4096,
             stream=True,
         )
         for chunk in stream:
@@ -132,7 +132,7 @@ def call_groq(model: dict, prompt: str, expect_json: bool = True) -> dict | str:
                     {"role": "user", "content": prompt}
                 ],
                 temperature=temperature,
-                max_tokens=8192,
+                max_tokens=2048,
             )
 
             raw_text = response.choices[0].message.content.strip()

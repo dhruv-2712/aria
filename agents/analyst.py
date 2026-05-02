@@ -11,21 +11,14 @@ class AnalystAgent:
         self.agent_name = "analyst"
 
     def run(self, input_data: dict) -> dict:
-        """
-        input_data = {
-            "session_id": str,
-            "domains": {domain: [findings]},   # from Classifier
-            "original_query": str
-        }
-        """
         self._validate_input(input_data)
         session_id = input_data["session_id"]
-        domains = input_data["domains"]
+        findings = input_data["findings"]
         original_query = input_data["original_query"]
 
         start = time.time()
 
-        insights, relationships = self._analyze_all(domains, original_query)
+        insights, relationships = self._analyze_all(findings, original_query)
         confidence = self._score_confidence(insights, relationships)
 
         output = {
@@ -41,22 +34,19 @@ class AnalystAgent:
         print(f"[Analyst] Done. {len(insights)} insights, confidence: {confidence:.2f}")
         return output
 
-    def _analyze_all(self, domains: dict, original_query: str) -> tuple:
-        """Single LLM call replacing _extract_insights + _find_relationships."""
-        domain_summary = ""
-        for domain, findings in domains.items():
-            if findings:
-                domain_summary += f"\n[{domain.upper()}]\n"
-                for f in findings[:3]:
-                    domain_summary += f"- {f.get('content', '')[:200]}\n"
+    def _analyze_all(self, findings: list, original_query: str) -> tuple:
+        """Single LLM call: extract insights + relationships from raw findings."""
+        findings_text = ""
+        for i, f in enumerate(findings[:15]):
+            findings_text += f"\n[{i+1}] {f.get('content', '')[:250]}"
 
         prompt = f"""
 ROLE: You are a senior intelligence analyst.
 
 RESEARCH QUESTION: {original_query}
 
-FINDINGS BY DOMAIN:
-{domain_summary}
+FINDINGS:
+{findings_text}
 
 TASK: Extract insights and find relationships in one pass.
 
@@ -211,7 +201,7 @@ RULES:
         return round(min(avg_confidence + relationship_bonus, 1.0), 3)
 
     def _validate_input(self, data: dict):
-        required = ["session_id", "domains", "original_query"]
+        required = ["session_id", "findings", "original_query"]
         for field in required:
             if field not in data:
                 raise ValueError(f"[Analyst] Missing required field: {field}")
