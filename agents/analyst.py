@@ -6,7 +6,8 @@ from core.memory import log_agent_call
 
 class AnalystAgent:
     def __init__(self):
-        self.model = build_model(temperature=0.2, smart=True)
+        self.model       = build_model(temperature=0.2, smart=True)   # insights (smart)
+        self.model_fast  = build_model(temperature=0.2, smart=False)  # relationships (fast)
         self.agent_name = "analyst"
 
     def run(self, input_data: dict) -> dict:
@@ -131,7 +132,7 @@ RULES:
 - Maximum 8 relationships
 - Never repeat the same pair
 """
-        result = call_groq(self.model, prompt, expect_json=True)
+        result = call_groq(self.model_fast, prompt, expect_json=True)
 
         if isinstance(result, list):
             return result

@@ -1,5 +1,6 @@
 # agents/devil.py
 import time
+from concurrent.futures import ThreadPoolExecutor
 from core.groq_client import build_model, call_groq
 from core.memory import log_agent_call
 
@@ -28,11 +29,18 @@ class DevilsAdvocateAgent:
         revision_count = input_data.get("revision_count", 0)
 
         start = time.time()
+        insights = insights[:10]  # cap to avoid token bloat
 
-        critiques = self._generate_critiques(insights, original_query)
+        # Run all 3 independent LLM calls in parallel
+        with ThreadPoolExecutor(max_workers=3) as ex:
+            f_critiques    = ex.submit(self._generate_critiques, insights, original_query)
+            f_missing      = ex.submit(self._find_missing_perspectives, insights, original_query)
+            f_fallacies    = ex.submit(self._detect_fallacies, insights, original_query)
+            critiques            = f_critiques.result()
+            missing_perspectives = f_missing.result()
+            fallacies            = f_fallacies.result()
+
         weak_claims = self._identify_weak_claims(critiques)
-        missing_perspectives = self._find_missing_perspectives(insights, original_query)
-        fallacies = self._detect_fallacies(insights, original_query)
 
         total_claims = len(insights)
         weak_ratio = len(weak_claims) / total_claims if total_claims > 0 else 0
