@@ -6,7 +6,7 @@ from core.memory import log_agent_call
 
 class SynthesizerAgent:
     def __init__(self):
-        self.model = build_model(temperature=0.2, smart=True)
+        self.model = build_model(temperature=0.2, smart=False)
         self.agent_name = "synthesizer"
 
     def run(self, input_data: dict) -> dict:

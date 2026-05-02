@@ -6,8 +6,8 @@ from core.memory import log_agent_call
 
 class AnalystAgent:
     def __init__(self):
-        self.model       = build_model(temperature=0.2, smart=True)   # insights (smart)
-        self.model_fast  = build_model(temperature=0.2, smart=False)  # relationships (fast)
+        self.model       = build_model(temperature=0.2, smart=False)
+        self.model_fast  = build_model(temperature=0.2, smart=False)
         self.agent_name = "analyst"
 
     def run(self, input_data: dict) -> dict:
