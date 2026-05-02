@@ -22,7 +22,7 @@ class ResearcherAgent:
 
         # Search all queries concurrently
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(queries)) as ex:
-            raw_batches = list(ex.map(lambda q: search(q, max_results=5), queries))
+            raw_batches = list(ex.map(lambda q: search(q, max_results=4), queries))
 
         # Flatten + tag with query index
         all_results = []

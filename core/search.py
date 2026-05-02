@@ -32,7 +32,7 @@ def _tavily(query: str, max_results: int) -> list[dict]:
                 "api_key":            TAVILY_KEY,
                 "query":              query,
                 "max_results":        max_results,
-                "search_depth":       "advanced",
+                "search_depth":       "basic",
                 "include_raw_content": False,
             },
             timeout=15,

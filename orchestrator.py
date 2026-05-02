@@ -254,36 +254,33 @@ Return ONLY a JSON array of 3 question strings. No explanation.
         prompt = f"""
 ROLE: You are a research query specialist.
 
-TASK: Break this research question into 4-5 targeted web search queries.
-Cover different angles: recent developments, statistics/data, expert criticism,
-historical context, economic impact.
+TASK: Break this research question into 3 targeted web search queries.
+Cover: recent developments/data, expert analysis, and criticism/counterarguments.
 
 RESEARCH QUESTION: {query}
 
 OUTPUT FORMAT:
-Return ONLY a JSON array of query strings. No explanation. No markdown.
-["query 1", "query 2", "query 3", "query 4", "query 5"]
+Return ONLY a JSON array of 3 query strings. No explanation. No markdown.
+["query 1", "query 2", "query 3"]
 
 RULES:
 - Each query must be web-search-friendly (concise, keyword-rich)
 - No duplicate angles — each query should retrieve different content
-- 4-5 queries total
+- Exactly 3 queries
 """
         try:
             result = call_groq(model, prompt, expect_json=True)
-            if isinstance(result, list) and len(result) >= 3:
+            if isinstance(result, list) and len(result) >= 2:
                 print(f"[Orchestrator] Query decomposed into {len(result)} search queries")
-                return result[:5]
+                return result[:3]
         except Exception as e:
             print(f"[Orchestrator] Query decomposition failed: {e}")
 
         # Fallback
         return [
             f"{query} latest research 2024",
-            f"{query} economic impact analysis",
-            f"{query} expert perspectives challenges",
             f"{query} statistics data evidence",
-            f"{query} criticism counterarguments",
+            f"{query} expert perspectives criticism",
         ]
 
     def _run_with_retry(self, agent_name: str, agent, input_data: dict,

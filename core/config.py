@@ -10,7 +10,7 @@ MAX_RETRIES = 4
 RETRY_DELAY = 5
 
 # Loop limits (lower = fewer API calls)
-MAX_RESEARCH_LOOPS = 1
+MAX_RESEARCH_LOOPS = 0
 MAX_CRITIQUE_LOOPS = 0
 
 # Response cache
