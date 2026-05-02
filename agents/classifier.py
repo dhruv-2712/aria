@@ -2,12 +2,12 @@
 import time
 from core.groq_client import build_model, call_groq
 from core.memory import log_agent_call
+from core.config import MAX_RESEARCH_LOOPS
 
 VALID_DOMAINS = [
     "scientific", "economic", "political", "social",
     "technical", "historical", "ethical", "cultural"
 ]
-MAX_LOOPS = 2
 
 
 class ClassifierAgent:
@@ -16,14 +16,6 @@ class ClassifierAgent:
         self.agent_name = "classifier"
 
     def run(self, input_data: dict) -> dict:
-        """
-        input_data = {
-            "session_id": str,
-            "findings": [...],        # from Researcher
-            "original_query": str,
-            "loop_count": int         # tracks recursion depth
-        }
-        """
         self._validate_input(input_data)
         session_id = input_data["session_id"]
         findings = input_data["findings"]
@@ -34,13 +26,14 @@ class ClassifierAgent:
 
         classified = self._classify_findings(findings, original_query)
         gaps = self._identify_gaps(classified)
-        follow_ups = []
 
-        if gaps and loop_count < MAX_LOOPS:
+        # Only generate follow-up queries if the research loop will actually use them
+        follow_ups = []
+        if gaps and loop_count < MAX_RESEARCH_LOOPS:
             follow_ups = self._generate_follow_up_queries(gaps, original_query)
             print(f"[Classifier] Gaps found in: {gaps}. Generating {len(follow_ups)} follow-up queries.")
-        elif loop_count >= MAX_LOOPS:
-            print(f"[Classifier] Max loops ({MAX_LOOPS}) reached. Skipping follow-ups.")
+        else:
+            print(f"[Classifier] Skipping follow-up generation (loop disabled or limit reached).")
 
         output = {
             "domains": classified,
@@ -58,8 +51,8 @@ class ClassifierAgent:
 
     def _classify_findings(self, findings: list, original_query: str) -> dict:
         findings_text = ""
-        for i, f in enumerate(findings):
-            findings_text += f"\n[{i}] {f.get('content', '')[:300]}"
+        for i, f in enumerate(findings[:12]):  # cap to avoid token bloat
+            findings_text += f"\n[{i}] {f.get('content', '')[:150]}"
 
         prompt = f"""
 ROLE: You are a domain classification expert for research intelligence.
