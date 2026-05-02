@@ -84,7 +84,7 @@ def stream_groq(model: dict, prompt: str, callback=None) -> str:
                 {"role": "user", "content": prompt},
             ],
             temperature=temperature,
-            max_tokens=4096,
+            max_tokens=8192,
             stream=True,
         )
         for chunk in stream:
