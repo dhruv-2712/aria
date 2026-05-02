@@ -25,8 +25,7 @@ class AnalystAgent:
 
         start = time.time()
 
-        insights = self._extract_insights(domains, original_query)
-        relationships = self._find_relationships(insights, original_query)
+        insights, relationships = self._analyze_all(domains, original_query)
         confidence = self._score_confidence(insights, relationships)
 
         output = {
@@ -41,6 +40,67 @@ class AnalystAgent:
         log_agent_call(session_id, self.agent_name, input_data, output, duration_ms)
         print(f"[Analyst] Done. {len(insights)} insights, confidence: {confidence:.2f}")
         return output
+
+    def _analyze_all(self, domains: dict, original_query: str) -> tuple:
+        """Single LLM call replacing _extract_insights + _find_relationships."""
+        domain_summary = ""
+        for domain, findings in domains.items():
+            if findings:
+                domain_summary += f"\n[{domain.upper()}]\n"
+                for f in findings[:3]:
+                    domain_summary += f"- {f.get('content', '')[:200]}\n"
+
+        prompt = f"""
+ROLE: You are a senior intelligence analyst.
+
+RESEARCH QUESTION: {original_query}
+
+FINDINGS BY DOMAIN:
+{domain_summary}
+
+TASK: Extract insights and find relationships in one pass.
+
+OUTPUT FORMAT: Return ONLY valid JSON. No markdown.
+{{
+  "insights": [
+    {{
+      "id": "insight_1",
+      "domain": "primary domain",
+      "claim": "Core insight (1-2 sentences, precise)",
+      "evidence": "What findings support this",
+      "tag": "core",
+      "confidence": 0.8
+    }}
+  ],
+  "relationships": [
+    {{
+      "insight_a": "insight_id",
+      "insight_b": "insight_id",
+      "relationship_type": "causal/correlational/contradictory/reinforcing/tradeoff",
+      "description": "The relationship in 1 sentence",
+      "strength": 0.7
+    }}
+  ]
+}}
+
+RULES:
+- insights: 5-8 total, tag = core/supporting/peripheral, confidence 0.0-1.0
+- relationships: only strength > 0.4, max 6, never repeat a pair
+- Return both arrays even if one is empty
+"""
+        result = call_groq(self.model, prompt, expect_json=True)
+
+        if isinstance(result, dict):
+            insights = result.get("insights", [])
+            relationships = result.get("relationships", [])
+            if insights:
+                return insights, relationships
+        # Fallback: retry with fast model
+        print("[Analyst] Primary extraction failed, retrying with fast model...")
+        result = call_groq(self.model_fast, prompt, expect_json=True)
+        if isinstance(result, dict):
+            return result.get("insights", []), result.get("relationships", [])
+        return [], []
 
     def _extract_insights(self, domains: dict, original_query: str) -> list:
         # Build a compact summary of all findings

@@ -27,7 +27,7 @@ class VisualizerAgent:
         start = time.time()
 
         sections = self._plan_sections(input_data)
-        tables = self._generate_table_specs(input_data)
+        tables = []  # skipped — not on critical path
         executive_summary = self._write_executive_summary(input_data)
 
         output = {

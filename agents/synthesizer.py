@@ -26,10 +26,11 @@ class SynthesizerAgent:
 
         start = time.time()
 
-        connections = self._find_cross_domain_connections(input_data)
-        implications = self._generate_implications(input_data)
-        headline = self._find_headline_insight(input_data)
-        narrative = self._build_narrative_arc(input_data, headline)
+        result = self._synthesize_all(input_data)
+        connections  = result.get("connections", [])
+        implications = result.get("implications", [])
+        headline     = result.get("headline", "")
+        narrative    = result.get("narrative", "")
 
         output = {
             "connections": connections,
@@ -46,6 +47,52 @@ class SynthesizerAgent:
               f"{len(implications)} implications.")
         print(f"[Synthesizer] Headline: {headline[:80]}...")
         return output
+
+    def _synthesize_all(self, input_data: dict) -> dict:
+        """Single LLM call replacing 4 sequential calls."""
+        context = self._build_context_summary(input_data)
+        prompt = f"""
+ROLE: You are a senior research synthesis expert.
+
+RESEARCH QUESTION: {input_data['original_query']}
+
+CONTEXT:
+{context}
+
+TASK: In one pass, produce all four synthesis components.
+
+OUTPUT FORMAT: Return ONLY valid JSON. No markdown.
+{{
+  "headline": "Single most important finding as one crisp declarative sentence (max 25 words)",
+  "narrative": "150-200 word narrative arc connecting all domains: setup → tension → resolution → implication. Plain prose.",
+  "connections": [
+    {{
+      "domain_a": "domain",
+      "domain_b": "domain",
+      "connection": "Non-obvious link between them (1-2 sentences)",
+      "implication": "What this means for the research question"
+    }}
+  ],
+  "implications": [
+    {{
+      "implication": "Key implication statement (1-2 sentences, specific)",
+      "audience": "policymakers/businesses/workers/researchers/society",
+      "urgency": "immediate/near_term/long_term",
+      "confidence": 0.8
+    }}
+  ]
+}}
+
+RULES:
+- headline: bold, specific, no hedging words
+- connections: 3-5 cross-domain links that are non-obvious
+- implications: 3-5 actionable implications
+- narrative: flowing prose, not bullet points
+"""
+        result = call_groq(self.model, prompt, expect_json=True)
+        if isinstance(result, dict) and ("headline" in result or "connections" in result):
+            return result
+        return {"headline": "", "narrative": "", "connections": [], "implications": []}
 
     def _build_context_summary(self, input_data: dict) -> str:
         insights = input_data.get("insights", [])

@@ -245,39 +245,11 @@ Return ONLY a JSON array of 3 question strings. No explanation.
         return []
 
     def _generate_search_queries(self, query: str) -> list:
-        """Use LLM to decompose the query into 5-7 targeted web-search strings."""
-        from core.groq_client import build_model, call_groq
-        model = build_model(temperature=0.3)
-        prompt = f"""
-ROLE: You are a research query specialist.
-
-TASK: Break this research question into 3 targeted web search queries.
-Cover: recent developments/data, expert analysis, and criticism/counterarguments.
-
-RESEARCH QUESTION: {query}
-
-OUTPUT FORMAT:
-Return ONLY a JSON array of 3 query strings. No explanation. No markdown.
-["query 1", "query 2", "query 3"]
-
-RULES:
-- Each query must be web-search-friendly (concise, keyword-rich)
-- No duplicate angles — each query should retrieve different content
-- Exactly 3 queries
-"""
-        try:
-            result = call_groq(model, prompt, expect_json=True)
-            if isinstance(result, list) and len(result) >= 2:
-                print(f"[Orchestrator] Query decomposed into {len(result)} search queries")
-                return result[:3]
-        except Exception as e:
-            print(f"[Orchestrator] Query decomposition failed: {e}")
-
-        # Fallback
+        """Generate 3 targeted search queries using templates (no LLM call)."""
         return [
-            f"{query} latest research 2024",
-            f"{query} statistics data evidence",
-            f"{query} expert perspectives criticism",
+            f"{query} latest research analysis 2024 2025",
+            f"{query} statistics data evidence impact",
+            f"{query} expert opinion criticism challenges",
         ]
 
     def _run_with_retry(self, agent_name: str, agent, input_data: dict,
