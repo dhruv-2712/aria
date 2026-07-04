@@ -2,7 +2,6 @@
 import time
 from concurrent.futures import ThreadPoolExecutor
 from core.state import ARIAState
-from core.config import MAX_RESEARCH_LOOPS, MAX_CRITIQUE_LOOPS
 from core.memory import init_db, create_session, update_session_status, log_agent_call, update_report_follow_ups
 from core.dedup import deduplicate_findings
 from agents.researcher import ResearcherAgent
@@ -278,89 +277,3 @@ Return ONLY a JSON array of 3 question strings. No explanation.
                     raise
                 time.sleep(2)
 
-    def _run_research_loop(self, query: str, state: ARIAState,
-                           initial_findings: list) -> tuple:
-        """Classifier → Researcher loop for gap filling. Max 2 iterations."""
-        all_findings = list(initial_findings)
-        loop_count = 0
-
-        while loop_count <= MAX_RESEARCH_LOOPS:
-            classifier_output = self._run_with_retry(
-                "classifier",
-                self.classifier,
-                {
-                    "session_id": state.session_id,
-                    "findings": all_findings,
-                    "original_query": query,
-                    "loop_count": loop_count
-                },
-                state
-            )
-
-            follow_ups = classifier_output.get("follow_ups", [])
-            if not follow_ups or loop_count >= MAX_RESEARCH_LOOPS:
-                break
-
-            print(f"[Orchestrator] Research loop {loop_count + 1}: "
-                  f"filling {len(classifier_output.get('gaps', []))} gaps")
-
-            follow_up_output = self._run_with_retry(
-                "researcher",
-                self.researcher,
-                {
-                    "session_id": state.session_id,
-                    "queries": follow_ups[:3],
-                    "original_query": query
-                },
-                state
-            )
-            all_findings.extend(follow_up_output.get("findings", []))
-            loop_count += 1
-
-        return all_findings, classifier_output
-
-    def _run_critique_loop(self, query: str, state: ARIAState,
-                           analyst_output: dict) -> tuple:
-        """Devil → Analyst revision loop. Max 2 iterations."""
-        insights = analyst_output.get("insights", [])
-        revision_count = 0
-
-        while revision_count <= MAX_CRITIQUE_LOOPS:
-            devil_output = self._run_with_retry(
-                "devil",
-                self.devil,
-                {
-                    "session_id": state.session_id,
-                    "insights": insights,
-                    "relationships": analyst_output.get("relationships", []),
-                    "original_query": query,
-                    "revision_count": revision_count
-                },
-                state
-            )
-
-            if not devil_output.get("revision_needed") or revision_count >= MAX_CRITIQUE_LOOPS:
-                break
-
-            print(f"[Orchestrator] Critique loop {revision_count + 1}: "
-                  f"weak ratio={devil_output.get('weak_ratio', 0):.0%}, "
-                  f"requesting analyst revision")
-
-            # Re-run analyst with critique context
-            weak_claims = [c.get("original_claim", "") for c in devil_output.get("weak_claims", [])]
-            revised_analyst = self._run_with_retry(
-                "analyst",
-                self.analyst,
-                {
-                    "session_id": state.session_id,
-                    "domains": analyst_output.get("domains",
-                                state.agent_outputs.get("classifier", {}).get("domains", {})),
-                    "original_query": query,
-                    "revision_note": f"Please strengthen or remove these weak claims: {weak_claims}"
-                },
-                state
-            )
-            insights = revised_analyst.get("insights", insights)
-            revision_count += 1
-
-        return insights, devil_output

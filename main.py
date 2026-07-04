@@ -1,6 +1,7 @@
 # main.py
 import json
 import os
+import pathlib
 import threading
 import uuid
 from fastapi import FastAPI, HTTPException, Request
@@ -16,11 +17,13 @@ from core.memory import (
 from orchestrator import Orchestrator
 import asyncio
 
+BASE_DIR = pathlib.Path(__file__).parent
+
 limiter = Limiter(key_func=get_remote_address, default_limits=[])
 app = FastAPI(title="ARIA Research API", version="2.0.0")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-app.mount("/static", StaticFiles(directory="frontend"), name="static")
+app.mount("/static", StaticFiles(directory=str(BASE_DIR / "frontend")), name="static")
 
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "")
 
@@ -42,7 +45,7 @@ def startup():
 
 @app.get("/")
 def serve_frontend():
-    return FileResponse("frontend/index.html")
+    return FileResponse(str(BASE_DIR / "frontend" / "index.html"))
 
 
 @app.post("/research")
